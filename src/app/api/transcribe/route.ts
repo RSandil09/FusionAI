@@ -84,7 +84,10 @@ export async function POST(request: Request) {
 			parsedMedia.pathname === "/api/video-proxy"
 		) {
 			const proxiedUrl = parsedMedia.searchParams.get("url");
-			if (proxiedUrl && (proxiedUrl.startsWith("http://") || proxiedUrl.startsWith("https://"))) {
+			if (
+				proxiedUrl &&
+				(proxiedUrl.startsWith("http://") || proxiedUrl.startsWith("https://"))
+			) {
 				absoluteMediaUrl = proxiedUrl;
 			}
 		}

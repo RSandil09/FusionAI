@@ -115,7 +115,8 @@ export async function POST(request: NextRequest) {
 				const proxiedUrl = parsed.searchParams.get("url");
 				if (
 					proxiedUrl &&
-					(proxiedUrl.startsWith("http://") || proxiedUrl.startsWith("https://"))
+					(proxiedUrl.startsWith("http://") ||
+						proxiedUrl.startsWith("https://"))
 				) {
 					fetchUrl = proxiedUrl;
 				}
