@@ -119,6 +119,142 @@ function selectBestSegments(segments: Segment[], videoDurationMs: number): Segme
 		.sort((a, b) => a.start - b.start);
 }
 
+// ─── Transcription ───────────────────────────────────────────────────────────
+
+interface TranscriptWord {
+	word: string;
+	start: number; // seconds
+	end: number;   // seconds
+}
+
+const TRANSCRIBE_PROMPT = `
+You are a transcription assistant. Listen to this video and transcribe all spoken words.
+Return ONLY valid JSON (no markdown, no extra text).
+All timestamps must be in SECONDS as floats.
+
+Return JSON:
+{
+  "words": [
+    { "word": "Hello", "start": 0.0, "end": 0.4 },
+    { "word": "world", "start": 0.5, "end": 0.9 }
+  ]
+}
+
+Rules:
+- Include every spoken word with its precise start/end time
+- If there is no speech, return { "words": [] }
+`.trim();
+
+async function transcribeVideo(url: string): Promise<TranscriptWord[]> {
+	try {
+		const response = await fetch(url, { signal: AbortSignal.timeout(90_000) });
+		if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+		const contentType = response.headers.get("content-type") || "video/mp4";
+		const buffer = await response.arrayBuffer();
+		const sizeMB = buffer.byteLength / (1024 * 1024);
+
+		if (sizeMB > 20) {
+			console.warn(`[auto-arrange] Video ${sizeMB.toFixed(1)} MB > 20 MB — skipping transcription`);
+			return [];
+		}
+
+		const base64 = Buffer.from(buffer).toString("base64");
+		const client = getGeminiClient();
+
+		const result = await client.models.generateContent({
+			model: "gemini-2.5-flash",
+			contents: [{
+				role: "user",
+				parts: [
+					{ inlineData: { mimeType: contentType, data: base64 } },
+					{ text: TRANSCRIBE_PROMPT },
+				],
+			}],
+		});
+
+		const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+		const parsed = parseJsonResponse<{ words: TranscriptWord[] }>(rawText);
+		return (parsed?.words ?? []).filter(
+			(w) => typeof w.word === "string" && typeof w.start === "number" && typeof w.end === "number",
+		);
+	} catch (err) {
+		console.error("[auto-arrange] Transcription error:", err);
+		return [];
+	}
+}
+
+/** Group words into caption segments of up to maxWords or maxDurationSecs */
+function groupIntoCaptions(
+	words: TranscriptWord[],
+	maxWords = 6,
+	maxDurationSecs = 4,
+): Array<{ text: string; words: TranscriptWord[]; start: number; end: number }> {
+	const lines: Array<{ text: string; words: TranscriptWord[]; start: number; end: number }> = [];
+	let current: TranscriptWord[] = [];
+
+	for (const w of words) {
+		current.push(w);
+		const dur = w.end - current[0].start;
+		if (current.length >= maxWords || dur >= maxDurationSecs) {
+			lines.push({
+				text: current.map((x) => x.word).join(" "),
+				words: current,
+				start: current[0].start,
+				end: w.end,
+			});
+			current = [];
+		}
+	}
+	if (current.length > 0) {
+		lines.push({
+			text: current.map((x) => x.word).join(" "),
+			words: current,
+			start: current[0].start,
+			end: current[current.length - 1].end,
+		});
+	}
+	return lines;
+}
+
+function makeCaptionItem(
+	id: string,
+	text: string,
+	words: TranscriptWord[],
+	displayFrom: number,
+	displayTo: number,
+	canvasW: number,
+) {
+	return {
+		id,
+		type: "caption",
+		name: "Caption",
+		display: { from: displayFrom, to: displayTo },
+		metadata: {},
+		details: {
+			text,
+			width: canvasW,
+			fontSize: 40,
+			fontFamily: "Roboto",
+			fontUrl: "",
+			textAlign: "center",
+			color: "#F8FAFC",
+			backgroundColor: "transparent",
+			borderColor: "#000000",
+			borderWidth: 4,
+			appearedColor: "#F8FAFC",
+			activeColor: "#0EA5E9",
+			activeFillColor: "#6366F1",
+			linesPerCaption: 2,
+			words: words.map((w) => ({
+				word: w.word,
+				start: Math.round(w.start * 1000),
+				end: Math.round(w.end * 1000),
+			})),
+		},
+	};
+}
+
 // ─── Track item builders ──────────────────────────────────────────────────────
 
 /**
@@ -220,6 +356,83 @@ function makeTrack(type: string, itemIds: string[]) {
 	};
 }
 
+// ─── Beat detection ───────────────────────────────────────────────────────────
+
+const BEAT_PROMPT = `
+You are a music analysis assistant. Analyze this audio track carefully.
+Return ONLY valid JSON (no markdown, no extra text).
+All timestamps must be in SECONDS as floats.
+
+Task: Detect the beat/rhythm timestamps in this audio.
+
+Return JSON:
+{
+  "bpm": 120,
+  "beats": [0.0, 0.5, 1.0, 1.5]
+}
+
+Rules:
+- "beats" is an array of timestamps (in seconds) where each beat falls
+- Include every beat from start to end
+- "bpm" is the estimated tempo in beats per minute
+- If the audio has no clear beat, return { "bpm": 0, "beats": [] }
+`.trim();
+
+async function detectBeats(url: string): Promise<number[]> {
+	try {
+		const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+		if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+		const contentType = response.headers.get("content-type") || "audio/mpeg";
+		const buffer = await response.arrayBuffer();
+		const sizeMB = buffer.byteLength / (1024 * 1024);
+
+		if (sizeMB > 20) {
+			console.warn(`[auto-arrange] Audio ${sizeMB.toFixed(1)} MB > 20 MB — skipping beat sync`);
+			return [];
+		}
+
+		const base64 = Buffer.from(buffer).toString("base64");
+		const client = getGeminiClient();
+
+		const result = await client.models.generateContent({
+			model: "gemini-2.5-flash",
+			contents: [{
+				role: "user",
+				parts: [
+					{ inlineData: { mimeType: contentType, data: base64 } },
+					{ text: BEAT_PROMPT },
+				],
+			}],
+		});
+
+		const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+		const parsed = parseJsonResponse<{ bpm: number; beats: number[] }>(rawText);
+		const beats = (parsed?.beats ?? []).filter((b) => typeof b === "number" && b >= 0);
+		console.log(`[auto-arrange] Beat detection: ${beats.length} beats at ${parsed?.bpm ?? 0} BPM`);
+		return beats;
+	} catch (err) {
+		console.error("[auto-arrange] Beat detection error:", err);
+		return [];
+	}
+}
+
+/** Snap a timestamp (ms) to the nearest beat (ms array), within tolerance */
+function snapToNearestBeat(
+	ms: number,
+	beatMs: number[],
+	toleranceMs = 400,
+): number {
+	if (beatMs.length === 0) return ms;
+	let closest = ms;
+	let minDiff = Infinity;
+	for (const b of beatMs) {
+		const diff = Math.abs(b - ms);
+		if (diff < minDiff) { minDiff = diff; closest = b; }
+	}
+	return minDiff <= toleranceMs ? closest : ms;
+}
+
 // ─── Main assembler ───────────────────────────────────────────────────────────
 
 const IMAGE_DISPLAY_MS = 4_000;
@@ -243,17 +456,34 @@ export async function autoArrangeAssets(
 	const mainTrackItemIds: string[] = [];
 	let cursor = 0; // ms
 
-	// ── Videos: AI scene detection, run in parallel ───────────────────────────
-	const videoResults = await Promise.all(
-		videos.map(async (asset) => {
-			const fallbackMs = asset.durationMs ?? 10_000;
-			const rawSegments = await analyseVideoScenes(asset.url, fallbackMs);
-			const segments = selectBestSegments(rawSegments, fallbackMs);
-			return { asset, segments };
-		}),
-	);
+	// ── Beat detection from first audio asset (runs in parallel with video AI) ──
+	const beatMsPromise = audios.length > 0
+		? detectBeats(audios[0].url)
+		: Promise.resolve([] as number[]);
 
-	for (const { asset, segments } of videoResults) {
+	// ── Videos: AI scene detection + transcription, run in parallel ─────────────
+	const [videoResults, beatTimestampsSecs] = await Promise.all([
+		Promise.all(
+			videos.map(async (asset) => {
+				const fallbackMs = asset.durationMs ?? 10_000;
+				const [rawSegments, transcriptWords] = await Promise.all([
+					analyseVideoScenes(asset.url, fallbackMs),
+					transcribeVideo(asset.url),
+				]);
+				const segments = selectBestSegments(rawSegments, fallbackMs);
+				return { asset, segments, transcriptWords };
+			}),
+		),
+		beatMsPromise,
+	]);
+
+	// Convert beat seconds to ms array for snapping
+	const beatMs = beatTimestampsSecs.map((b) => Math.round(b * 1000));
+
+	// Words for caption track — collected as we place video clips
+	const allCaptionWords: Array<TranscriptWord & { displayOffsetMs: number }> = [];
+
+	for (const { asset, segments, transcriptWords } of videoResults) {
 		const w = asset.width ?? size.width;
 		const h = asset.height ?? size.height;
 
@@ -263,15 +493,34 @@ export async function autoArrangeAssets(
 			const clipMs     = trimToMs - trimFromMs;
 			if (clipMs < 500) continue;
 
+			// Snap the clip start to the nearest beat if audio beats available
+			const snappedStart = snapToNearestBeat(cursor, beatMs);
+			const gap = snappedStart - cursor;
+			// Only apply snap if it doesn't create a large gap (> 1 beat ~500ms)
+			const displayStart = gap >= 0 && gap < 600 ? snappedStart : cursor;
+
+			// Offset transcript words that fall within this segment
+			const segWords = transcriptWords.filter(
+				(tw) => tw.start >= seg.start && tw.end <= seg.end,
+			);
+			for (const tw of segWords) {
+				allCaptionWords.push({
+					...tw,
+					start: tw.start - seg.start + displayStart / 1000,
+					end:   tw.end   - seg.start + displayStart / 1000,
+					displayOffsetMs: displayStart,
+				});
+			}
+
 			const id = generateId();
 			trackItemsMap[id] = makeVideoItem(
 				id, asset.url,
-				cursor, cursor + clipMs,
+				displayStart, displayStart + clipMs,
 				trimFromMs, trimToMs,
 				w, h,
 			);
 			mainTrackItemIds.push(id);
-			cursor += clipMs;
+			cursor = displayStart + clipMs;
 		}
 	}
 
@@ -311,10 +560,42 @@ export async function autoArrangeAssets(
 		tracks.push(makeTrack("audio", audioTrackItemIds));
 	}
 
+	// ── Caption track (only if transcription produced words) ─────────────────
+	const captionTrackItemIds: string[] = [];
+	if (allCaptionWords.length > 0) {
+		const captionLines = groupIntoCaptions(allCaptionWords);
+		for (const line of captionLines) {
+			const id = generateId();
+			const fromMs = Math.round(line.start * 1000);
+			const toMs   = Math.round(line.end   * 1000);
+			trackItemsMap[id] = makeCaptionItem(
+				id,
+				line.text,
+				line.words,
+				fromMs,
+				toMs,
+				size.width,
+			);
+			captionTrackItemIds.push(id);
+		}
+		if (captionTrackItemIds.length > 0) {
+			tracks.push({
+				id: generateId(),
+				type: "caption",
+				name: "Captions",
+				items: captionTrackItemIds,
+				accepts: ["caption"],
+				magnetic: false,
+				static: false,
+			});
+		}
+	}
+
 	// Full flat list of all item IDs (required by validateEditorState)
 	const trackItemIds = [
 		...mainTrackItemIds,
 		...audioTrackItemIds,
+		...captionTrackItemIds,
 	];
 
 	// Minimum duration: max of video content vs first audio, at least 1 s

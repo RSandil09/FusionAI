@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { getIdToken } from "@/lib/auth/client";
@@ -104,6 +104,11 @@ export default function NewProjectModal({ isOpen, onClose }: NewProjectModalProp
   // Step 3
   const [loadingStep, setLoadingStep] = useState(0);
 
+  // AI name suggestions
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const suggestDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Reset on close ──────────────────────────────────────────────────────────
   const handleClose = () => {
     if (step === 3) return; // don't allow close during generation
@@ -112,8 +117,43 @@ export default function NewProjectModal({ isOpen, onClose }: NewProjectModalProp
     setAssets([]);
     setOrientation("portrait");
     setLoadingStep(0);
+    setNameSuggestions([]);
     onClose();
   };
+
+  // ── AI name suggestions ─────────────────────────────────────────────────────
+  // Trigger whenever done assets change and user hasn't typed a name yet
+  useEffect(() => {
+    const doneNames = assets
+      .filter((a) => a.status === "done" || a.status === "uploading")
+      .map((a) => a.name);
+    if (doneNames.length === 0) { setNameSuggestions([]); return; }
+
+    if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    suggestDebounceRef.current = setTimeout(async () => {
+      setLoadingSuggestions(true);
+      try {
+        const token = await getIdToken();
+        const res = await fetch("/api/projects/suggest-name", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ filenames: doneNames }),
+        });
+        if (res.ok) {
+          const { suggestions } = await res.json();
+          setNameSuggestions(suggestions ?? []);
+        }
+      } catch {
+        // silently ignore — suggestions are optional
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    }, 800);
+    return () => { if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current); };
+  }, [assets]);
 
   // ── File upload ─────────────────────────────────────────────────────────────
   const uploadFile = useCallback(async (file: File) => {
@@ -329,6 +369,24 @@ export default function NewProjectModal({ isOpen, onClose }: NewProjectModalProp
                   if (e.key === "Enter" && canProceedToStep2) setStep(2);
                 }}
               />
+              {/* AI name suggestions */}
+              {(loadingSuggestions || nameSuggestions.length > 0) && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {loadingSuggestions && nameSuggestions.length === 0 && (
+                    <span className="text-white/30 text-xs animate-pulse">✨ Suggesting names…</span>
+                  )}
+                  {nameSuggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setProjectName(s)}
+                      className="px-2.5 py-1 rounded-full bg-white/8 border border-white/15 text-white/60 text-xs hover:border-white/40 hover:text-white transition-colors"
+                    >
+                      ✨ {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Drop zone */}

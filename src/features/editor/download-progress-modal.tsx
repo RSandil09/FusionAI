@@ -7,11 +7,13 @@ import {
 	Loader2,
 	Download,
 	Film,
+	ImageIcon,
 } from "lucide-react";
 import { ShareSection } from "./share-section";
 import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
 import { download } from "@/utils/download";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getIdToken } from "@/lib/auth/client";
 
 /* ─── Animated progress bar ─── */
 function ProgressBar({ progress }: { progress: number }) {
@@ -42,12 +44,49 @@ function phaseLabel(progress: number): string {
 }
 
 const DownloadProgressModal = () => {
-	const { progress, displayProgressModal, output, error, actions } =
+	const { progress, displayProgressModal, output, error, actions, projectId } =
 		useDownloadState();
 
 	const isCompleted = !!output?.url;
 	const hasFailed = !!error;
 	const isExporting = !isCompleted && !hasFailed;
+
+	// AI thumbnail state
+	const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+	const [generatingThumb, setGeneratingThumb] = useState(false);
+	const [thumbError, setThumbError] = useState<string | null>(null);
+
+	// Reset thumbnail state when modal closes or new export starts
+	useEffect(() => {
+		if (!displayProgressModal) {
+			setThumbnailUrl(null);
+			setThumbError(null);
+		}
+	}, [displayProgressModal]);
+
+	const handleGenerateThumbnail = async () => {
+		if (!projectId) return;
+		setGeneratingThumb(true);
+		setThumbError(null);
+		try {
+			const token = await getIdToken();
+			const res = await fetch("/api/projects/thumbnail", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
+				body: JSON.stringify({ projectId }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || "Thumbnail generation failed");
+			setThumbnailUrl(data.thumbnailUrl);
+		} catch (err) {
+			setThumbError(err instanceof Error ? err.message : "Failed to generate thumbnail");
+		} finally {
+			setGeneratingThumb(false);
+		}
+	};
 
 	// Auto-download once complete
 	const autoDownloaded = useRef(false);
@@ -117,11 +156,53 @@ const DownloadProgressModal = () => {
 									Your video has been rendered and is ready.
 								</p>
 							</div>
-							<div className="flex flex-col items-center gap-4 w-full max-w-xs">
+							<div className="flex flex-col items-center gap-3 w-full max-w-xs">
 								<Button onClick={handleDownload} className="w-full gap-2">
 									<Download className="h-4 w-4" />
 									Download MP4
 								</Button>
+
+								{/* AI Thumbnail section */}
+								{!thumbnailUrl && (
+									<Button
+										variant="outline"
+										onClick={handleGenerateThumbnail}
+										disabled={generatingThumb || !projectId}
+										className="w-full gap-2"
+									>
+										{generatingThumb ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : (
+											<ImageIcon className="h-4 w-4" />
+										)}
+										{generatingThumb ? "Generating thumbnail…" : "✨ Generate AI Thumbnail"}
+									</Button>
+								)}
+								{thumbError && (
+									<p className="text-xs text-destructive text-center">{thumbError}</p>
+								)}
+								{thumbnailUrl && (
+									<div className="w-full space-y-2">
+										<p className="text-xs text-muted-foreground text-center font-medium">AI Thumbnail</p>
+										<a href={thumbnailUrl} target="_blank" rel="noopener noreferrer">
+											<img
+												src={thumbnailUrl}
+												alt="AI generated thumbnail"
+												className="w-full rounded-lg border border-border/50 hover:opacity-90 transition-opacity"
+											/>
+										</a>
+										<Button
+											variant="outline"
+											size="sm"
+											className="w-full gap-2 text-xs"
+											onClick={() => download(thumbnailUrl, "thumbnail.jpg")}
+										>
+											<Download className="h-3 w-3" />
+											Download Thumbnail
+										</Button>
+									</div>
+								)}
+
 								{output.url && <ShareSection videoUrl={output.url} />}
 								<Button
 									variant="ghost"
