@@ -102,6 +102,8 @@ export interface EngineOptions {
   onItemSplit: (id: string, timeMs: number) => void;
   onMarkerAdd: (marker: TimelineMarker) => void;
   onMarkerSeek: (timeMs: number) => void;
+  /** Called when an item is dropped onto a different track of the same type */
+  onItemChangeTrack: (id: string, display: IDisplay, fromTrackId: string, toTrackId: string) => void;
 }
 
 // ─── Drag / resize state ──────────────────────────────────────────────────────
@@ -118,6 +120,12 @@ export interface ActiveDrag {
   originalTrim?: ITrim;
   /** IDs of sibling items moved by a ripple (Alt+drag) operation */
   movedSiblingIds?: Set<string>;
+  /** Track row ID where the drag started */
+  sourceTrackId?: string;
+  /** Track row ID currently being hovered (for cross-track drop) */
+  targetTrackId?: string;
+  /** item.top at drag start — used to restore when not merging */
+  originalTop?: number;
   // For selection-rect
   selX?: number;
   selY?: number;

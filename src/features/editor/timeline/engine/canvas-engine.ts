@@ -116,6 +116,10 @@ export class CanvasEngine {
   /** Canvas-space X of the current razor hover position (null = not hovering over an item) */
   private razorPreviewX: number | null = null;
 
+  // ── Cross-track drop highlight ────────────────────────────────────────────────
+  /** ID of the track row to highlight as a valid drop target during cross-track drag */
+  private dropHighlightTrackId: string | null = null;
+
   // ── Options ───────────────────────────────────────────────────────────────────
   private opts: EngineOptions;
 
@@ -391,6 +395,24 @@ export class CanvasEngine {
 
     // 2 — Transition zones
     this.renderTransitions(ctx);
+
+    // 2b — Cross-track drop target highlight
+    if (this.dropHighlightTrackId) {
+      const row = this.trackRows.find((r) => r.id === this.dropHighlightTrackId);
+      if (row) {
+        const contentWidth = Math.max(
+          this.width - this.translateX + 400,
+          timeMsToUnits(this.lastDuration, this.lastScale?.zoom ?? 1) + this.spacing.left + 400,
+        );
+        ctx.save();
+        ctx.fillStyle = "rgba(0,216,214,0.12)";
+        ctx.fillRect(0, row.top, contentWidth, row.height);
+        ctx.strokeStyle = "rgba(0,216,214,0.8)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, row.top, contentWidth, row.height);
+        ctx.restore();
+      }
+    }
 
     // 3 — Items (check if track is solo-active → dim non-solo)
     const hasSolo = this.trackRows.some((r) => r.solo);
@@ -869,6 +891,7 @@ export class CanvasEngine {
       if (!multi && !item.isSelected) this.setSelection([item.id]);
       else if (multi) this.toggleSelection(item.id);
 
+      const sourceRow = this.trackRows.find((r) => r.itemIds.includes(item.id));
       this.drag = {
         kind: "move",
         itemId: item.id,
@@ -878,6 +901,8 @@ export class CanvasEngine {
         startScreenY: sy,
         originalDisplay: { ...item.display },
         originalTrim: { ...item.trim },
+        sourceTrackId: sourceRow?.id,
+        originalTop: item.top,
       };
       this.canvas.style.cursor = "grabbing";
       return;
@@ -1018,6 +1043,32 @@ export class CanvasEngine {
         this.guideLine = null;
       }
 
+      // ── Cross-track detection: check Y position for compatible target row ──────
+      if (!e.altKey && this.drag.sourceTrackId) {
+        const targetRow = this.getTrackRowAt(cy);
+        const sourceRow = this.trackRows.find((r) => r.id === this.drag!.sourceTrackId);
+        const compatible =
+          targetRow &&
+          sourceRow &&
+          targetRow.id !== sourceRow.id &&
+          targetRow.type === sourceRow.type &&
+          !targetRow.locked;
+
+        if (compatible) {
+          // Snap item visually to the target row
+          item.top = targetRow.top;
+          item.height = targetRow.height;
+          this.drag.targetTrackId = targetRow.id;
+          this.dropHighlightTrackId = targetRow.id;
+        } else {
+          // Restore to source row
+          item.top = this.drag.originalTop ?? (sourceRow?.top ?? item.top);
+          item.height = sourceRow?.height ?? item.height;
+          this.drag.targetTrackId = undefined;
+          this.dropHighlightTrackId = null;
+        }
+      }
+
       item.recalcLayout();
       this.requestRenderAll();
       return;
@@ -1069,7 +1120,21 @@ export class CanvasEngine {
         const moved =
           item.display.from !== this.drag.originalDisplay.from ||
           item.display.to !== this.drag.originalDisplay.to;
-        if (moved) {
+        const trackChanged =
+          this.drag.targetTrackId &&
+          this.drag.sourceTrackId &&
+          this.drag.targetTrackId !== this.drag.sourceTrackId;
+
+        if (trackChanged) {
+          // Cross-track drop: move item to new track + update display
+          this.opts.onItemChangeTrack(
+            item.id,
+            { ...item.display },
+            this.drag.sourceTrackId!,
+            this.drag.targetTrackId!,
+          );
+        } else if (moved) {
+          // Same-track move: only update display timing
           this.opts.onItemMove(item.id, { ...item.display });
           // Also report any siblings moved by ripple (Alt+drag)
           if (this.drag.movedSiblingIds) {
@@ -1080,6 +1145,7 @@ export class CanvasEngine {
           }
         }
       }
+      this.dropHighlightTrackId = null;
     }
 
     if ((kind === "resize-left" || kind === "resize-right") && this.drag.itemId) {

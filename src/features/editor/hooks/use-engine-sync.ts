@@ -67,6 +67,40 @@ export function buildEngineCallbacks(
         { updateHistory: true, kind: "update" },
       );
     },
+    onItemChangeTrack: (id: string, display: IDisplay, fromTrackId: string, toTrackId: string) => {
+      // Move item from source track to target track and update display timing.
+      // Also removes the source track if it becomes empty after the move.
+      const current = stateManager.getState();
+      const newTracks = current.tracks
+        .map((t: any) => {
+          const propName = "items" in t ? "items" : "trackItemIds";
+          const items: string[] = t[propName] ?? [];
+          if (t.id === fromTrackId) {
+            return { ...t, [propName]: items.filter((itemId: string) => itemId !== id) };
+          }
+          if (t.id === toTrackId) {
+            return { ...t, [propName]: [...items, id] };
+          }
+          return t;
+        })
+        .filter((t: any) => {
+          // Remove tracks that became empty
+          const items: string[] = t.items ?? t.trackItemIds ?? [];
+          return items.length > 0;
+        });
+      const updatedMap = {
+        ...current.trackItemsMap,
+        [id]: { ...current.trackItemsMap[id], display },
+      };
+      const newDuration = Math.max(
+        0,
+        ...Object.values(updatedMap).map((item: any) => item.display?.to ?? 0),
+      );
+      stateManager.updateState(
+        { tracks: newTracks, trackItemsMap: updatedMap, duration: newDuration || current.duration },
+        { updateHistory: true, kind: "update" },
+      );
+    },
     onItemSplit: (id: string, timeMs: number) => {
       dispatch(LAYER_SELECT,    { payload: { trackItemIds: [id] } });
       dispatch(LAYER_SELECTION, { payload: { activeIds: [id] } });
