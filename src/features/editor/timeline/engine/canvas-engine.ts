@@ -989,6 +989,7 @@ export class CanvasEngine {
           const originalFrom = this.drag.originalDisplay.from;
           const delta = newFrom - originalFrom;
           // Move all items after the dragged one
+          if (!this.drag.movedSiblingIds) this.drag.movedSiblingIds = new Set();
           for (const id of row.itemIds) {
             if (id === item.id) continue;
             const sibling = this.items.find((it) => it.id === id);
@@ -998,6 +999,7 @@ export class CanvasEngine {
                 to: Math.max(0, sibling.display.to + delta),
               };
               sibling.recalcLayout();
+              this.drag.movedSiblingIds.add(id);
             }
           }
         }
@@ -1067,7 +1069,16 @@ export class CanvasEngine {
         const moved =
           item.display.from !== this.drag.originalDisplay.from ||
           item.display.to !== this.drag.originalDisplay.to;
-        if (moved) this.opts.onItemMove(item.id, { ...item.display });
+        if (moved) {
+          this.opts.onItemMove(item.id, { ...item.display });
+          // Also report any siblings moved by ripple (Alt+drag)
+          if (this.drag.movedSiblingIds) {
+            for (const sibId of this.drag.movedSiblingIds) {
+              const sib = this.items.find((i) => i.id === sibId);
+              if (sib) this.opts.onItemMove(sibId, { ...sib.display });
+            }
+          }
+        }
       }
     }
 

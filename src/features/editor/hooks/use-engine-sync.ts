@@ -1,5 +1,5 @@
 import { dispatch } from "@designcombo/events";
-import { LAYER_SELECTION, LAYER_SELECT, LAYER_MOVE, ACTIVE_SPLIT } from "@designcombo/state";
+import { LAYER_SELECTION, LAYER_SELECT, ACTIVE_SPLIT } from "@designcombo/state";
 import type { IDisplay, ITrim } from "@designcombo/types";
 import useStore from "../store/use-store";
 
@@ -12,9 +12,14 @@ import useStore from "../store/use-store";
  *   LAYER_SELECTION ("layer:selection") — use-timeline-events listens to this to update
  *                                         the Zustand store's activeIds for the UI.
  * Both must be dispatched on every selection change.
+ *
+ * NOTE: LAYER_MOVE ("layer:move") is intentionally NOT dispatched here. The
+ * @designcombo/state initListeners() does NOT handle that event, so dispatching it
+ * would leave the stateManager's internal trackItemsMap stale and positions would
+ * not be persisted on save. Instead we call stateManager.updateState() directly.
  */
 export function buildEngineCallbacks(
-  _stateManager: any,
+  stateManager: any,
   fps: number,
   playerRef: React.RefObject<any> | null,
   engineRef: React.RefObject<any>,
@@ -31,10 +36,36 @@ export function buildEngineCallbacks(
       dispatch(LAYER_SELECTION,  { payload: { activeIds: ids } });
     },
     onItemMove: (id: string, display: IDisplay) => {
-      dispatch(LAYER_MOVE, { payload: { id, display } });
+      // Directly update the stateManager — LAYER_MOVE dispatch does NOT work because
+      // @designcombo/state's initListeners never handles "layer:move".
+      const current = stateManager.getState();
+      const updatedMap = {
+        ...current.trackItemsMap,
+        [id]: { ...current.trackItemsMap[id], display },
+      };
+      const newDuration = Math.max(
+        0,
+        ...Object.values(updatedMap).map((item: any) => item.display?.to ?? 0),
+      );
+      stateManager.updateState(
+        { trackItemsMap: updatedMap, duration: newDuration || current.duration },
+        { updateHistory: true, kind: "update" },
+      );
     },
     onItemResize: (id: string, display: IDisplay, trim: ITrim) => {
-      dispatch(LAYER_MOVE, { payload: { id, display, trim } });
+      const current = stateManager.getState();
+      const updatedMap = {
+        ...current.trackItemsMap,
+        [id]: { ...current.trackItemsMap[id], display, trim },
+      };
+      const newDuration = Math.max(
+        0,
+        ...Object.values(updatedMap).map((item: any) => item.display?.to ?? 0),
+      );
+      stateManager.updateState(
+        { trackItemsMap: updatedMap, duration: newDuration || current.duration },
+        { updateHistory: true, kind: "update" },
+      );
     },
     onItemSplit: (id: string, timeMs: number) => {
       dispatch(LAYER_SELECT,    { payload: { trackItemIds: [id] } });

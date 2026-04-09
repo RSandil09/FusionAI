@@ -116,6 +116,8 @@ export interface ActiveDrag {
   startScreenY: number;
   originalDisplay?: IDisplay;
   originalTrim?: ITrim;
+  /** IDs of sibling items moved by a ripple (Alt+drag) operation */
+  movedSiblingIds?: Set<string>;
   // For selection-rect
   selX?: number;
   selY?: number;
