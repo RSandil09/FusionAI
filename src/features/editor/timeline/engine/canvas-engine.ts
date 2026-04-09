@@ -1127,7 +1127,7 @@ export class CanvasEngine {
 
         if (trackChanged) {
           // Cross-track drop: move item to new track + update display
-          this.opts.onItemChangeTrack(
+          this.opts.onItemChangeTrack?.(
             item.id,
             { ...item.display },
             this.drag.sourceTrackId!,

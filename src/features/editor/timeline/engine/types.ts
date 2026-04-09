@@ -103,7 +103,7 @@ export interface EngineOptions {
   onMarkerAdd: (marker: TimelineMarker) => void;
   onMarkerSeek: (timeMs: number) => void;
   /** Called when an item is dropped onto a different track of the same type */
-  onItemChangeTrack: (id: string, display: IDisplay, fromTrackId: string, toTrackId: string) => void;
+  onItemChangeTrack?: (id: string, display: IDisplay, fromTrackId: string, toTrackId: string) => void;
 }
 
 // ─── Drag / resize state ──────────────────────────────────────────────────────
