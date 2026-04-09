@@ -15,11 +15,11 @@ const Player = () => {
 		<RemotionPlayer
 			ref={playerRef}
 			component={Composition}
-			durationInFrames={Math.round((duration / 1000) * fps) || 1}
+			durationInFrames={Math.max(1, Math.round((duration / 1000) * fps))}
 			compositionWidth={size.width}
 			compositionHeight={size.height}
 			className={`h-full w-full bg-[${background.value}]`}
-			fps={30}
+			fps={fps}
 			overflowVisible
 		/>
 	);

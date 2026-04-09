@@ -72,8 +72,8 @@ export const BaseSequence = ({
 	return (
 		<Sequence
 			key={item.id}
-			from={from}
-			durationInFrames={durationInFrames || 1 / fps}
+			from={Math.max(0, from)}
+			durationInFrames={Math.max(1, durationInFrames)}
 			style={{
 				pointerEvents: "none",
 			}}

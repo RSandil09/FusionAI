@@ -254,6 +254,13 @@ const Composition = () => {
 					const muteAudio = audioMutedItemIds.has(item.id);
 					// Mute on audio-only track: nothing to show, skip entirely
 					if (muteAudio && AUDIO_ONLY_TYPES.has(item.type)) return null;
+					// Display-window guard: skip items whose time window doesn't cover the current frame.
+					// This is the primary visibility gate — Remotion's <Sequence> provides a second
+					// layer inside BaseSequence, but explicit gating here is more reliable and
+					// ensures no item leaks outside its display.from / display.to range.
+					const itemFromFrame = Math.round(((item.display?.from ?? 0) / 1000) * fps);
+					const itemToFrame = Math.round(((item.display?.to ?? 0) / 1000) * fps);
+					if (frame < itemFromFrame || frame >= itemToFrame) return null;
 					return SequenceItem[item.type](item, {
 						fps,
 						handleTextChange,
@@ -268,12 +275,12 @@ const Composition = () => {
 				const firstItem = trackItemsMap[group[0].id];
 				// Solo: skip the whole transition group if first item is hidden
 				if (hiddenItemIds.has(firstItem.id)) return null;
-				const from = (firstItem.display.from / 1000) * fps;
+				const from = Math.round(((firstItem.display?.from ?? 0) / 1000) * fps);
 				return (
 					<TransitionSeries from={from} key={index}>
 						{group.map((item) => {
 							if (item.type === "transition") {
-								const durationInFrames = (item.duration / 1000) * fps;
+								const durationInFrames = Math.max(1, Math.round((item.duration / 1000) * fps));
 								return Transitions[item.kind]({
 									durationInFrames,
 									...size,
