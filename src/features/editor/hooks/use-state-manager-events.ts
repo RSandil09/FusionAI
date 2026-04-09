@@ -59,6 +59,23 @@ export const useStateManagerEvents = (stateManager: StateManager) => {
 		const updateItemDetailsSubscription =
 			stateManager.subscribeToUpdateItemDetails(handleUpdateItemDetails);
 
+		// After undo/redo, push the full restored state into Zustand.
+		// subscribeToHistory fires after stateSubject.next() completes inside
+		// undo()/redo(), so getState() already holds the restored values.
+		// This is a safety flush because `duration` is excluded from the diff
+		// key set and individual subscriptions may miss it after history replay.
+		const historySubscription = stateManager.subscribeToHistory(() => {
+			const s = stateManager.getState();
+			setState({
+				tracks: s.tracks,
+				trackItemIds: s.trackItemIds,
+				trackItemsMap: s.trackItemsMap,
+				transitionIds: s.transitionIds,
+				transitionsMap: s.transitionsMap,
+				duration: s.duration,
+			});
+		});
+
 		return () => {
 			resizeDesignSubscription.unsubscribe();
 			scaleSubscription.unsubscribe();
@@ -67,6 +84,7 @@ export const useStateManagerEvents = (stateManager: StateManager) => {
 			updateTrackItemsMap.unsubscribe();
 			itemsDetailsSubscription.unsubscribe();
 			updateItemDetailsSubscription.unsubscribe();
+			historySubscription.unsubscribe();
 		};
 	}, [
 		stateManager,

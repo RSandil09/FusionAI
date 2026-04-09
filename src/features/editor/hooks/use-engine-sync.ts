@@ -43,12 +43,16 @@ export function buildEngineCallbacks(
         ...current.trackItemsMap,
         [id]: { ...current.trackItemsMap[id], display },
       };
+      // Use current.duration as the floor so duration only GROWS during a live
+      // drag — never shrinks. Shrinking durationInFrames while Remotion's player
+      // is past the new boundary throws an invariant error. Duration will be
+      // recalculated correctly on resize or the next full state sync.
       const newDuration = Math.max(
-        0,
+        current.duration,
         ...Object.values(updatedMap).map((item: any) => item.display?.to ?? 0),
       );
       stateManager.updateState(
-        { trackItemsMap: updatedMap, duration: newDuration || current.duration },
+        { trackItemsMap: updatedMap, duration: newDuration },
         { updateHistory: true, kind: "update" },
       );
     },
@@ -92,12 +96,33 @@ export function buildEngineCallbacks(
         ...current.trackItemsMap,
         [id]: { ...current.trackItemsMap[id], display },
       };
+
+      // Nullify any transitions that reference the moved item.
+      // Leaving them intact causes groupTrackItems() in composition.tsx to build
+      // a cross-track TransitionSeries that renders at the wrong time on the wrong
+      // track. Setting kind:"none" disables the transition while preserving the
+      // record for undo (the library's own pattern for disabled transitions).
+      const currentTransitionsMap: Record<string, any> = current.transitionsMap ?? {};
+      const newTransitionsMap = Object.fromEntries(
+        Object.entries(currentTransitionsMap).map(([tId, t]: [string, any]) => {
+          if (t.fromId === id || t.toId === id) {
+            return [tId, { ...t, kind: "none" }];
+          }
+          return [tId, t];
+        }),
+      );
+
       const newDuration = Math.max(
         0,
         ...Object.values(updatedMap).map((item: any) => item.display?.to ?? 0),
       );
       stateManager.updateState(
-        { tracks: newTracks, trackItemsMap: updatedMap, duration: newDuration || current.duration },
+        {
+          tracks: newTracks,
+          trackItemsMap: updatedMap,
+          transitionsMap: newTransitionsMap,
+          duration: newDuration || current.duration,
+        },
         { updateHistory: true, kind: "update" },
       );
     },

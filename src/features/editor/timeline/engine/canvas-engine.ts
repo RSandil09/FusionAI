@@ -1047,11 +1047,15 @@ export class CanvasEngine {
       if (!e.altKey && this.drag.sourceTrackId) {
         const targetRow = this.getTrackRowAt(cy);
         const sourceRow = this.trackRows.find((r) => r.id === this.drag!.sourceTrackId);
+        // Use the dragged item's own type rather than the track's dominant type
+        // to avoid false rejections when a track has mixed item types.
+        const draggedItem = this.items.find((i) => i.id === this.drag!.itemId);
+        const itemType = draggedItem?.type ?? sourceRow?.type;
         const compatible =
           targetRow &&
           sourceRow &&
           targetRow.id !== sourceRow.id &&
-          targetRow.type === sourceRow.type &&
+          targetRow.type === itemType &&
           !targetRow.locked;
 
         if (compatible) {
@@ -1126,13 +1130,35 @@ export class CanvasEngine {
           this.drag.targetTrackId !== this.drag.sourceTrackId;
 
         if (trackChanged) {
-          // Cross-track drop: move item to new track + update display
-          this.opts.onItemChangeTrack?.(
-            item.id,
-            { ...item.display },
-            this.drag.sourceTrackId!,
-            this.drag.targetTrackId!,
-          );
+          // Check for time-overlap collision with existing items on the target track.
+          // If the dropped item overlaps an existing one, abort the cross-track move
+          // and restore the item to its source row.
+          const targetRow = this.trackRows.find((r) => r.id === this.drag!.targetTrackId);
+          const hasCollision = targetRow?.itemIds.some((existingId) => {
+            if (existingId === item.id) return false;
+            const existing = this.items.find((i) => i.id === existingId);
+            if (!existing) return false;
+            return item.display.from < existing.display.to &&
+                   item.display.to > existing.display.from;
+          }) ?? false;
+
+          if (hasCollision) {
+            // Restore item visually to its source row
+            const sourceRow = this.trackRows.find((r) => r.id === this.drag!.sourceTrackId);
+            if (sourceRow) {
+              item.top = this.drag.originalTop ?? sourceRow.top;
+              item.height = sourceRow.height;
+              item.recalcLayout();
+            }
+          } else {
+            // Cross-track drop: move item to new track + update display
+            this.opts.onItemChangeTrack?.(
+              item.id,
+              { ...item.display },
+              this.drag.sourceTrackId!,
+              this.drag.targetTrackId!,
+            );
+          }
         } else if (moved) {
           // Same-track move: only update display timing
           this.opts.onItemMove(item.id, { ...item.display });
