@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Play, Download, MoreHorizontal, Clock, Video } from "lucide-react";
+import { Play, Clock, Video } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/lib/db/database.types";
 

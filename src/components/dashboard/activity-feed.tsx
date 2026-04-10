@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
 	CheckCircle2, XCircle, Loader2, Download,
 	Film, Image as ImageIcon, Music, File, Clock,
@@ -47,7 +46,6 @@ function getAssetColor(type: string) {
 }
 
 function RenderItem({ render }: { render: Render }) {
-	const router = useRouter();
 	const isCompleted = render.status === "completed";
 	const isFailed = render.status === "failed";
 	const isProcessing = render.status === "processing" || render.status === "pending";

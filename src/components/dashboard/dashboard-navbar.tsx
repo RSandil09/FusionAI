@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserMenu } from "@/components/auth/user-menu";
 import { LogoIcons } from "@/components/shared/logos";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Settings, X } from "lucide-react";
+import { Plus, Search, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NewProjectModal from "@/components/dashboard/new-project-modal";

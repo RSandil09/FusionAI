@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Check, ArrowRight } from "lucide-react";
 import { LogoIcons } from "@/components/shared/logos";
 import { cn } from "@/lib/utils";
@@ -83,9 +82,7 @@ export function OnboardingModal({
 			<DialogContent
 				className="p-0 overflow-hidden border-0 shadow-none bg-transparent max-w-[440px] w-full"
 			>
-				<VisuallyHidden>
-					<DialogTitle>Connect your publish channels</DialogTitle>
-				</VisuallyHidden>
+				<DialogTitle className="sr-only">Connect your publish channels</DialogTitle>
 
 				{/* Outer glow ring */}
 				<div className="relative rounded-2xl bg-[#111111] border border-white/10 shadow-2xl shadow-black/60 overflow-hidden">

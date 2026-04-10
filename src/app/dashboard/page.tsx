@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
 	Plus, Folder, Film, Image as ImageIcon, Music, File,
-	LayoutGrid, List, SlidersHorizontal, Loader2,
+	LayoutGrid, List, SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -122,7 +121,6 @@ function FilterTabs<T extends string>({
 
 function DashboardContent() {
 	const { user } = useAuth();
-	const router = useRouter();
 
 	const [showNewProject, setShowNewProject] = useState(false);
 	const [allProjects, setAllProjects] = useState<Project[]>([]);
