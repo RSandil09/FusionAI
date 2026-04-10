@@ -166,6 +166,37 @@ export async function getUserRenders(
 }
 
 /**
+ * Get recent renders for a user, joined with project name.
+ * Used by the dashboard activity feed.
+ */
+export async function getRecentRenders(
+	userId: string,
+	limit = 10,
+): Promise<(Render & { project_name: string | null })[]> {
+	try {
+		const { data, error } = await supabase
+			.from("renders")
+			.select("*, projects(name)")
+			.eq("user_id", userId)
+			.order("created_at", { ascending: false })
+			.limit(limit);
+
+		if (error) {
+			logger.error("Error fetching recent renders:", error);
+			return [];
+		}
+
+		return (data || []).map((r: any) => ({
+			...r,
+			project_name: r.projects?.name ?? null,
+		}));
+	} catch (error) {
+		logger.error("Failed to get recent renders:", error);
+		return [];
+	}
+}
+
+/**
  * Delete a render
  */
 export async function deleteRender(renderId: string): Promise<boolean> {

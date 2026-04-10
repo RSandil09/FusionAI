@@ -1,6 +1,7 @@
 import { Inter, Space_Grotesk } from "next/font/google";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { OnboardingProvider } from "@/components/onboarding/onboarding-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import { baseUrl, createMetadata } from "@/utils/metadata";
 import { QueryProvider } from "@/components/query-provider";
 import {
@@ -41,20 +42,34 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
+			<head>
+				{/*
+				  Inline script runs before React hydrates — reads localStorage and
+				  applies the "dark" class to <html> immediately, preventing any
+				  flash of the wrong theme on page load.
+				*/}
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `(function(){try{var t=localStorage.getItem('fusion-theme');var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches)||(!t);if(d)document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');}catch(e){}})();`,
+					}}
+				/>
+			</head>
 			<body
-				className={`${inter.variable} ${spaceGrotesk.variable} antialiased dark font-sans bg-muted`}
+				className={`${inter.variable} ${spaceGrotesk.variable} antialiased font-sans bg-background`}
 			>
-				<AuthProvider>
-					<QueryProvider>
-						<OnboardingProvider>
-							{children}
-							<StoreInitializer />
-							<BackgroundUploadRunner />
-							<Toaster />
-						</OnboardingProvider>
-					</QueryProvider>
-				</AuthProvider>
+				<ThemeProvider>
+					<AuthProvider>
+						<QueryProvider>
+							<OnboardingProvider>
+								{children}
+								<StoreInitializer />
+								<BackgroundUploadRunner />
+								<Toaster />
+							</OnboardingProvider>
+						</QueryProvider>
+					</AuthProvider>
+				</ThemeProvider>
 				<Analytics />
 			</body>
 		</html>

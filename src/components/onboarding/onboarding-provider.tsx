@@ -64,23 +64,27 @@ export function OnboardingProvider({
 		};
 	}, [user]);
 
-	const handleComplete = async (skipped: boolean) => {
-		if (!user) return;
-		const token = await getIdToken();
-		if (!token) return;
-
-		await fetch("/api/settings", {
-			method: "PATCH",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${token}`,
-			},
-			body: JSON.stringify({
-				onboarding_completed: true,
-				onboarding_skipped: skipped,
-			}),
-		});
+	const handleComplete = (skipped: boolean) => {
+		// Close immediately — no waiting on the network
 		setShowOnboarding(false);
+
+		// Persist in the background
+		getIdToken().then((token) => {
+			if (!token) return;
+			fetch("/api/settings", {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					onboarding_completed: true,
+					onboarding_skipped: skipped,
+				}),
+			}).catch(() => {
+				// Non-critical — user dismissed the modal, don't surface this error
+			});
+		});
 	};
 
 	const handleConnect = (provider: "youtube" | "instagram" | "tiktok") => {

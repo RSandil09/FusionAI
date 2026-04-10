@@ -1,44 +1,66 @@
 "use client";
 
-/**
- * Project Card Component
- * Displays project thumbnail and metadata with rename/delete actions
- */
-
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Trash2, Clock, Pencil } from "lucide-react";
+import {
+	MoreVertical, Trash2, Clock, Pencil, Play,
+	Video, ExternalLink,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { getIdToken } from "@/lib/auth/client";
+import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/db/database.types";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 
+export type ViewMode = "grid" | "list";
+
 interface ProjectCardProps {
 	project: Project;
+	viewMode?: ViewMode;
 	onDelete?: (projectId: string) => void;
 	onRename?: (projectId: string, newName: string) => void;
 }
 
-export function ProjectCard({ project, onDelete, onRename }: ProjectCardProps) {
+function getAspectLabel(w: number | null, h: number | null): string {
+	if (!w || !h) return "";
+	const r = w / h;
+	if (Math.abs(r - 16 / 9) < 0.05) return "16:9";
+	if (Math.abs(r - 9 / 16) < 0.05) return "9:16";
+	if (Math.abs(r - 1) < 0.05) return "1:1";
+	return `${w}×${h}`;
+}
+
+function formatDuration(seconds: number | null): string {
+	if (!seconds || seconds <= 0) return "";
+	const m = Math.floor(seconds / 60);
+	const s = Math.floor(seconds % 60);
+	return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+export function ProjectCard({
+	project,
+	viewMode = "grid",
+	onDelete,
+	onRename,
+}: ProjectCardProps) {
 	const router = useRouter();
-	const [showMenu, setShowMenu] = React.useState(false);
+	const [showMenu, setShowMenu] = useState(false);
 	const [isRenaming, setIsRenaming] = useState(false);
 	const [renameValue, setRenameValue] = useState(project.name);
 	const [isSaving, setIsSaving] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	const handleOpen = () => {
-		if (isRenaming) return;
-		router.push(`/editor/${project.id}`);
-	};
+	const aspect = getAspectLabel(project.resolution_width, project.resolution_height);
+	const duration = formatDuration(project.duration);
+	const lastEdited = formatDistanceToNow(new Date(project.updated_at), { addSuffix: true });
+
+	const handleOpen = () => { if (!isRenaming) router.push(`/editor/${project.id}`); };
 
 	const handleDelete = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		if (confirm(`Delete "${project.name}"?`)) {
-			onDelete?.(project.id);
-		}
+		if (confirm(`Delete "${project.name}"?`)) onDelete?.(project.id);
 		setShowMenu(false);
 	};
 
@@ -57,33 +79,25 @@ export function ProjectCard({ project, onDelete, onRename }: ProjectCardProps) {
 			setRenameValue(project.name);
 			return;
 		}
-
 		setIsSaving(true);
 		try {
 			const token = await getIdToken();
-			if (!token) {
-				toast.error("Not authenticated");
-				return;
-			}
+			if (!token) { toast.error("Not authenticated"); return; }
 			const res = await fetch(`/api/projects/${project.id}`, {
 				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
+				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
 				body: JSON.stringify({ name: newName }),
 			});
-
 			if (res.ok) {
 				onRename?.(project.id, newName);
 				toast.success("Project renamed");
 			} else {
 				const err = await res.json().catch(() => ({}));
-				toast.error(err.message || "Failed to rename project");
+				toast.error(err.message || "Failed to rename");
 				setRenameValue(project.name);
 			}
 		} catch (e: any) {
-			toast.error(`Rename error: ${e.message}`);
+			toast.error(`Error: ${e.message}`);
 			setRenameValue(project.name);
 		} finally {
 			setIsSaving(false);
@@ -93,131 +107,184 @@ export function ProjectCard({ project, onDelete, onRename }: ProjectCardProps) {
 
 	const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === "Enter") commitRename();
-		if (e.key === "Escape") {
-			setIsRenaming(false);
-			setRenameValue(project.name);
-		}
+		if (e.key === "Escape") { setIsRenaming(false); setRenameValue(project.name); }
 		e.stopPropagation();
 	};
 
+	const MenuButton = () => (
+		<div className="relative">
+			<button
+				onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+				className="flex items-center justify-center h-7 w-7 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+			>
+				<MoreVertical className="h-3.5 w-3.5 text-[#a0a0a0]" />
+			</button>
+			{showMenu && (
+				<>
+					<div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
+					<div className="absolute right-0 top-full mt-1 z-20 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[140px]">
+						<button
+							onClick={startRename}
+							className="w-full px-3 py-2 text-left text-sm hover:bg-white/5 flex items-center gap-2 text-[#e0e0e0] transition-colors"
+						>
+							<Pencil className="h-3.5 w-3.5 text-[#707070]" />
+							Rename
+						</button>
+						<button
+							onClick={(e) => { e.stopPropagation(); router.push(`/editor/${project.id}`); }}
+							className="w-full px-3 py-2 text-left text-sm hover:bg-white/5 flex items-center gap-2 text-[#e0e0e0] transition-colors"
+						>
+							<ExternalLink className="h-3.5 w-3.5 text-[#707070]" />
+							Open
+						</button>
+						<div className="h-px bg-white/8 my-1" />
+						<button
+							onClick={handleDelete}
+							className="w-full px-3 py-2 text-left text-sm hover:bg-red-500/10 flex items-center gap-2 text-red-400 transition-colors"
+						>
+							<Trash2 className="h-3.5 w-3.5" />
+							Delete
+						</button>
+					</div>
+				</>
+			)}
+		</div>
+	);
+
+	// ── List view ──────────────────────────────────────────────
+	if (viewMode === "list") {
+		return (
+			<div
+				onClick={handleOpen}
+				className="group flex items-center gap-4 px-4 py-3 border-b border-white/5 hover:bg-white/3 transition-colors cursor-pointer last:border-0"
+			>
+				{/* Thumb */}
+				<div className="relative h-12 w-20 shrink-0 rounded-lg overflow-hidden bg-white/5 border border-white/8">
+					{project.thumbnail_url ? (
+						<img src={project.thumbnail_url} alt={project.name} className="w-full h-full object-cover" />
+					) : (
+						<div className="w-full h-full flex items-center justify-center">
+							<Video className="h-5 w-5 text-[#404040]" />
+						</div>
+					)}
+				</div>
+
+				{/* Name */}
+				<div className="flex-1 min-w-0">
+					{isRenaming ? (
+						<input
+							ref={inputRef}
+							value={renameValue}
+							autoFocus
+							disabled={isSaving}
+							onChange={(e) => setRenameValue(e.target.value)}
+							onBlur={commitRename}
+							onKeyDown={handleRenameKeyDown}
+							onClick={(e) => e.stopPropagation()}
+							className="w-full text-sm font-semibold bg-[#222] border border-[#ff6a00]/50 rounded px-2 py-1 outline-none text-white"
+						/>
+					) : (
+						<p className="text-sm font-semibold text-white truncate" onDoubleClick={startRename}>
+							{project.name}
+						</p>
+					)}
+				</div>
+
+				{/* Meta */}
+				<div className="hidden md:flex items-center gap-4 text-xs text-[#606060] shrink-0">
+					{aspect && <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/8">{aspect}</span>}
+					{duration && <span className="font-mono">{duration}</span>}
+					<span className="flex items-center gap-1">
+						<Clock className="h-3 w-3" />{lastEdited}
+					</span>
+				</div>
+
+				{/* Actions */}
+				<div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+					<button
+						onClick={(e) => { e.stopPropagation(); router.push(`/editor/${project.id}`); }}
+						className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ff6a00] hover:bg-[#ff7a1a] text-white text-xs font-semibold transition-colors"
+					>
+						<Play className="h-3 w-3 fill-white" />
+						Open
+					</button>
+					<MenuButton />
+				</div>
+			</div>
+		);
+	}
+
+	// ── Grid view ──────────────────────────────────────────────
 	return (
 		<div
 			onClick={handleOpen}
-			className="group relative bg-card border border-border rounded-lg cursor-pointer hover:border-primary/50 transition-all duration-200 hover:shadow-lg"
+			className="group relative bg-[#111111] border border-white/8 rounded-xl cursor-pointer hover:border-[#ff6a00]/30 hover:shadow-lg hover:shadow-[#ff6a00]/5 transition-all duration-200 overflow-hidden"
 		>
 			{/* Thumbnail */}
-			<div className="aspect-video bg-muted flex items-center justify-center relative overflow-hidden rounded-t-lg">
+			<div className="aspect-video bg-[#0a0a0a] flex items-center justify-center relative overflow-hidden">
 				{project.thumbnail_url ? (
-					<img
-						src={project.thumbnail_url}
-						alt={project.name}
-						className="w-full h-full object-cover"
-					/>
+					<img src={project.thumbnail_url} alt={project.name} className="w-full h-full object-cover" />
 				) : (
-					<div className="flex flex-col items-center text-muted-foreground">
-						<svg
-							className="h-16 w-16 mb-2"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={1.5}
-								d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-							/>
-						</svg>
-						<span className="text-sm">No preview</span>
+					<div className="flex flex-col items-center text-[#303030]">
+						<Video className="h-12 w-12 mb-1.5" />
+						<span className="text-xs">No preview</span>
 					</div>
 				)}
 
 				{/* Hover overlay */}
-				<div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-					<span className="text-white font-medium">Open Project</span>
+				<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+					<div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2">
+						<Play className="h-3.5 w-3.5 text-white fill-white" />
+						<span className="text-white text-sm font-medium">Open</span>
+					</div>
 				</div>
 
-				{/* Resolution badge */}
-				<div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-					{project.resolution_width}x{project.resolution_height}
+				{/* Badges */}
+				<div className="absolute top-2 left-2 flex items-center gap-1.5">
+					{aspect && (
+						<span className="bg-black/70 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+							{aspect}
+						</span>
+					)}
+					{duration && (
+						<span className="bg-black/70 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded font-mono">
+							{duration}
+						</span>
+					)}
+				</div>
+
+				{/* Menu button top-right */}
+				<div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+					<MenuButton />
 				</div>
 			</div>
 
 			{/* Info */}
-			<div className="p-4">
-				<div className="flex items-start justify-between gap-2">
-					<div className="flex-1 min-w-0">
-						{isRenaming ? (
-							<input
-								ref={inputRef}
-								value={renameValue}
-								autoFocus
-								disabled={isSaving}
-								onChange={(e) => setRenameValue(e.target.value)}
-								onBlur={commitRename}
-								onKeyDown={handleRenameKeyDown}
-								onClick={(e) => e.stopPropagation()}
-								className="w-full text-base font-semibold bg-background border border-primary rounded px-1 py-0 outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-							/>
-						) : (
-							<h3
-								className="font-semibold truncate text-base mb-1 cursor-text"
-								onDoubleClick={startRename}
-								title="Double-click to rename"
-							>
-								{project.name}
-							</h3>
-						)}
-						<div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-							<Clock className="h-3.5 w-3.5" />
-							<span>
-								{formatDistanceToNow(new Date(project.updated_at), {
-									addSuffix: true,
-								})}
-							</span>
-						</div>
-					</div>
-
-					{/* Menu */}
-					<div className="relative">
-						<button
-							onClick={(e) => {
-								e.stopPropagation();
-								setShowMenu(!showMenu);
-							}}
-							className="p-1 hover:bg-accent rounded transition-colors"
-						>
-							<MoreVertical className="h-4 w-4" />
-						</button>
-
-						{showMenu && (
-							<>
-								<div
-									className="fixed inset-0 z-10"
-									onClick={(e) => {
-										e.stopPropagation();
-										setShowMenu(false);
-									}}
-								/>
-								<div className="absolute right-0 top-full mt-1 z-20 bg-popover border border-white/10 rounded-lg shadow-xl py-1 min-w-[140px]">
-									<button
-										onClick={startRename}
-										className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2"
-									>
-										<Pencil className="h-4 w-4" />
-										Rename
-									</button>
-									<button
-										onClick={handleDelete}
-										className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 text-destructive"
-									>
-										<Trash2 className="h-4 w-4" />
-										Delete
-									</button>
-								</div>
-							</>
-						)}
-					</div>
+			<div className="p-3.5">
+				{isRenaming ? (
+					<input
+						ref={inputRef}
+						value={renameValue}
+						autoFocus
+						disabled={isSaving}
+						onChange={(e) => setRenameValue(e.target.value)}
+						onBlur={commitRename}
+						onKeyDown={handleRenameKeyDown}
+						onClick={(e) => e.stopPropagation()}
+						className="w-full text-sm font-semibold bg-[#222] border border-[#ff6a00]/50 rounded px-2 py-1 outline-none text-white mb-1.5"
+					/>
+				) : (
+					<h3
+						className="font-semibold text-sm text-white truncate mb-1.5"
+						onDoubleClick={startRename}
+						title={project.name}
+					>
+						{project.name}
+					</h3>
+				)}
+				<div className="flex items-center gap-1 text-[11px] text-[#606060]">
+					<Clock className="h-3 w-3" />
+					<span>{lastEdited}</span>
 				</div>
 			</div>
 		</div>
