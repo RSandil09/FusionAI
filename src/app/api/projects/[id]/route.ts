@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { supabaseAdmin } from "@/lib/db/supabase-admin";
@@ -13,12 +14,12 @@ export async function PATCH(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	const startTime = Date.now();
-	console.log("💾 === PATCH /api/projects/[id] START ===");
+	logger.log("💾 === PATCH /api/projects/[id] START ===");
 
 	try {
 		// ── Step 1: Resolve route params ──────────────────────────────────
 		const { id: projectId } = await params;
-		console.log("   projectId:", projectId);
+		logger.log("   projectId:", projectId);
 
 		if (!projectId) {
 			return NextResponse.json(
@@ -28,12 +29,12 @@ export async function PATCH(
 		}
 
 		// ── Step 2: Authenticate via Bearer token / session cookie ────────
-		console.log("   Authenticating user...");
+		logger.log("   Authenticating user...");
 		let user: { id: string; email: string } | null = null;
 		try {
 			user = await getUserFromRequest();
 		} catch (authErr: any) {
-			console.error("   ❌ Auth threw exception:", authErr.message);
+			logger.error("   ❌ Auth threw exception:", authErr.message);
 			return NextResponse.json(
 				{ message: `Auth error: ${authErr.message}` },
 				{ status: 500 },
@@ -41,7 +42,7 @@ export async function PATCH(
 		}
 
 		if (!user) {
-			console.error("   ❌ No user returned by getUserFromRequest");
+			logger.error("   ❌ No user returned by getUserFromRequest");
 			return NextResponse.json(
 				{
 					message:
@@ -50,15 +51,15 @@ export async function PATCH(
 				{ status: 401 },
 			);
 		}
-		console.log("   ✓ Authenticated user:", user.id, user.email);
+		logger.log("   ✓ Authenticated user:", user.id, user.email);
 
 		// ── Step 3: Parse request body ────────────────────────────────────
-		console.log("   Parsing request body...");
+		logger.log("   Parsing request body...");
 		let body: any;
 		try {
 			body = await request.json();
 		} catch (parseErr: any) {
-			console.error("   ❌ Failed to parse request body:", parseErr.message);
+			logger.error("   ❌ Failed to parse request body:", parseErr.message);
 			return NextResponse.json(
 				{ message: `Invalid JSON body: ${parseErr.message}` },
 				{ status: 400 },
@@ -66,9 +67,9 @@ export async function PATCH(
 		}
 
 		const { editor_state, name } = body;
-		console.log("   Body keys:", Object.keys(body));
-		console.log("   editor_state type:", typeof editor_state);
-		console.log("   name:", name);
+		logger.log("   Body keys:", Object.keys(body));
+		logger.log("   editor_state type:", typeof editor_state);
+		logger.log("   name:", name);
 
 		const updatePayload: Record<string, unknown> = {};
 
@@ -80,7 +81,7 @@ export async function PATCH(
 				typeof editor_state.trackItemsMap !== "object" ||
 				!Array.isArray(editor_state.trackItemIds)
 			) {
-				console.error("   ❌ editor_state failed structure validation");
+				logger.error("   ❌ editor_state failed structure validation");
 				return NextResponse.json(
 					{ message: "Invalid editor_state: must contain trackItemsMap (object) and trackItemIds (array)" },
 					{ status: 400 },
@@ -104,8 +105,8 @@ export async function PATCH(
 		}
 
 		// ── Step 4: Verify Supabase admin client is ready ─────────────────
-		console.log("   Checking Supabase admin client...");
-		console.log(
+		logger.log("   Checking Supabase admin client...");
+		logger.log(
 			"   Using key type:",
 			process.env.SUPABASE_SERVICE_ROLE_KEY
 				? "service_role ✓"
@@ -113,7 +114,7 @@ export async function PATCH(
 		);
 
 		// ── Step 5: Verify project exists and belongs to this user (READ) ──
-		console.log("   Fetching project to verify ownership...");
+		logger.log("   Fetching project to verify ownership...");
 		const { data: existingProject, error: readErr } = await supabaseAdmin
 			.from("projects")
 			.select("id, user_id, name")
@@ -121,7 +122,7 @@ export async function PATCH(
 			.maybeSingle();
 
 		if (readErr) {
-			console.error(
+			logger.error(
 				"   ❌ Supabase SELECT error:",
 				readErr.code,
 				readErr.message,
@@ -138,24 +139,24 @@ export async function PATCH(
 		}
 
 		if (!existingProject) {
-			console.error(`   ❌ Project not found: ${projectId}`);
+			logger.error(`   ❌ Project not found: ${projectId}`);
 			return NextResponse.json(
 				{ message: `Project not found: ${projectId}` },
 				{ status: 404 },
 			);
 		}
 
-		console.log(
+		logger.log(
 			"   Project found:",
 			existingProject.id,
 			"owner:",
 			existingProject.user_id,
 		);
-		console.log("   Requesting user:", user.id);
+		logger.log("   Requesting user:", user.id);
 
 		// Security check — verify ownership
 		if (existingProject.user_id !== user.id) {
-			console.error(
+			logger.error(
 				`   ❌ Ownership mismatch: project.user_id=${existingProject.user_id} vs token.uid=${user.id}`,
 			);
 			return NextResponse.json(
@@ -168,7 +169,7 @@ export async function PATCH(
 		}
 
 		// ── Step 6: Perform the UPDATE ────────────────────────────────────
-		console.log("   Updating project...", Object.keys(updatePayload));
+		logger.log("   Updating project...", Object.keys(updatePayload));
 		const { data, error: updateErr } = await supabaseAdmin
 			.from("projects")
 			.update(updatePayload)
@@ -176,7 +177,7 @@ export async function PATCH(
 			.select("id, name, updated_at");
 
 		if (updateErr) {
-			console.error("   ❌ Supabase UPDATE error:", {
+			logger.error("   ❌ Supabase UPDATE error:", {
 				code: updateErr.code,
 				message: updateErr.message,
 				details: updateErr.details,
@@ -194,7 +195,7 @@ export async function PATCH(
 		}
 
 		if (!data || data.length === 0) {
-			console.error("   ❌ UPDATE matched 0 rows despite SELECT succeeding");
+			logger.error("   ❌ UPDATE matched 0 rows despite SELECT succeeding");
 			return NextResponse.json(
 				{
 					message:
@@ -206,10 +207,10 @@ export async function PATCH(
 
 		const updated = data[0];
 		const elapsed = Date.now() - startTime;
-		console.log(
+		logger.log(
 			`   ✅ Save complete in ${elapsed}ms. updated_at: ${updated.updated_at}`,
 		);
-		console.log("💾 === PATCH /api/projects/[id] END ===");
+		logger.log("💾 === PATCH /api/projects/[id] END ===");
 
 		return NextResponse.json(
 			{
@@ -219,7 +220,7 @@ export async function PATCH(
 			{ status: 200 },
 		);
 	} catch (error: any) {
-		console.error(
+		logger.error(
 			"💥 UNEXPECTED error in PATCH /api/projects/[id]:",
 			error.message,
 			error.stack,

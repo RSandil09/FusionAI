@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
 			total: data.pagination?.total_count ?? items.length,
 		});
 	} catch (err: any) {
-		console.error("Giphy proxy error:", err.message);
+		logger.error("Giphy proxy error:", err.message);
 		return NextResponse.json({ error: err.message }, { status: 500 });
 	}
 }

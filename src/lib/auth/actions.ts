@@ -3,6 +3,7 @@
  * Client-side auth functions for signup, login, OAuth, etc.
  */
 
+import { logger } from "@/lib/logger";
 import {
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
@@ -37,12 +38,12 @@ export async function signUpWithEmail(
 			await updateProfile(userCredential.user, { displayName });
 		}
 
-		console.log("✅ Signed up:", userCredential.user.email);
+		logger.log("✅ Signed up:", userCredential.user.email);
 
 		// Create server-side session cookie
 		try {
 			const idToken = await userCredential.user.getIdToken();
-			console.log("🔐 Creating session cookie...");
+			logger.log("🔐 Creating session cookie...");
 
 			const response = await fetch("/api/auth/session", {
 				method: "POST",
@@ -51,21 +52,21 @@ export async function signUpWithEmail(
 			});
 
 			if (response.ok) {
-				console.log("✅ Session cookie created");
+				logger.log("✅ Session cookie created");
 			} else {
-				console.warn(
+				logger.warn(
 					"⚠️ Failed to create session cookie:",
 					await response.text(),
 				);
 			}
 		} catch (sessionError) {
-			console.error("❌ Session cookie creation failed:", sessionError);
+			logger.error("❌ Session cookie creation failed:", sessionError);
 			// Don't fail the signup, but log the error
 		}
 
 		return userCredential.user;
 	} catch (error) {
-		console.error("Sign up error:", error);
+		logger.error("Sign up error:", error);
 		throw formatAuthError(error);
 	}
 }
@@ -86,12 +87,12 @@ export async function signInWithEmail(
 			password,
 		);
 
-		console.log("✅ Signed in:", userCredential.user.email);
+		logger.log("✅ Signed in:", userCredential.user.email);
 
 		// Create server-side session cookie
 		try {
 			const idToken = await userCredential.user.getIdToken();
-			console.log("🔐 Creating session cookie...");
+			logger.log("🔐 Creating session cookie...");
 
 			const response = await fetch("/api/auth/session", {
 				method: "POST",
@@ -100,21 +101,21 @@ export async function signInWithEmail(
 			});
 
 			if (response.ok) {
-				console.log("✅ Session cookie created");
+				logger.log("✅ Session cookie created");
 			} else {
-				console.warn(
+				logger.warn(
 					"⚠️ Failed to create session cookie:",
 					await response.text(),
 				);
 			}
 		} catch (sessionError) {
-			console.error("❌ Session cookie creation failed:", sessionError);
+			logger.error("❌ Session cookie creation failed:", sessionError);
 			// Don't fail the login, but log the error
 		}
 
 		return userCredential.user;
 	} catch (error) {
-		console.error("Sign in error:", error);
+		logger.error("Sign in error:", error);
 		throw formatAuthError(error);
 	}
 }
@@ -133,12 +134,12 @@ export async function signInWithGoogle(): Promise<User> {
 
 	try {
 		const userCredential = await signInWithPopup(auth, provider);
-		console.log("✅ Signed in with Google:", userCredential.user.email);
+		logger.log("✅ Signed in with Google:", userCredential.user.email);
 
 		// Create server-side session cookie
 		try {
 			const idToken = await userCredential.user.getIdToken();
-			console.log("🔐 Creating session cookie...");
+			logger.log("🔐 Creating session cookie...");
 
 			const response = await fetch("/api/auth/session", {
 				method: "POST",
@@ -147,21 +148,21 @@ export async function signInWithGoogle(): Promise<User> {
 			});
 
 			if (response.ok) {
-				console.log("✅ Session cookie created");
+				logger.log("✅ Session cookie created");
 			} else {
-				console.warn(
+				logger.warn(
 					"⚠️ Failed to create session cookie:",
 					await response.text(),
 				);
 			}
 		} catch (sessionError) {
-			console.error("❌ Session cookie creation failed:", sessionError);
+			logger.error("❌ Session cookie creation failed:", sessionError);
 			// Don't fail the login, but log the error
 		}
 
 		return userCredential.user;
 	} catch (error) {
-		console.error("Google sign in error:", error);
+		logger.error("Google sign in error:", error);
 		throw formatAuthError(error);
 	}
 }
@@ -178,17 +179,17 @@ export async function signOut(): Promise<void> {
 			await fetch("/api/auth/session", {
 				method: "DELETE",
 			});
-			console.log("✅ Session cookie deleted");
+			logger.log("✅ Session cookie deleted");
 		} catch (sessionError) {
-			console.error("❌ Failed to delete session cookie:", sessionError);
+			logger.error("❌ Failed to delete session cookie:", sessionError);
 			// Continue with Firebase sign out anyway
 		}
 
 		// Then sign out from Firebase client
 		await firebaseSignOut(auth);
-		console.log("✅ Signed out");
+		logger.log("✅ Signed out");
 	} catch (error) {
-		console.error("Sign out error:", error);
+		logger.error("Sign out error:", error);
 		throw formatAuthError(error);
 	}
 }
@@ -201,9 +202,9 @@ export async function sendPasswordReset(email: string): Promise<void> {
 
 	try {
 		await sendPasswordResetEmail(auth, email);
-		console.log("✅ Password reset email sent to:", email);
+		logger.log("✅ Password reset email sent to:", email);
 	} catch (error) {
-		console.error("Password reset error:", error);
+		logger.error("Password reset error:", error);
 		throw formatAuthError(error);
 	}
 }

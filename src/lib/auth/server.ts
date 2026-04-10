@@ -3,6 +3,7 @@
  * No mock tokens, no hacks - proper server-side auth
  */
 
+import { logger } from "@/lib/logger";
 import * as admin from "firebase-admin";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -14,7 +15,7 @@ export function getFirebaseAdmin(): admin.app.App {
 	// Check if app already exists (handles Next.js hot-reload)
 	const apps = admin.apps;
 	if (apps.length > 0 && apps[0]) {
-		if (!isProd) console.log("♻️ Reusing existing Firebase Admin app");
+		if (!isProd) logger.log("♻️ Reusing existing Firebase Admin app");
 		return apps[0];
 	}
 
@@ -33,10 +34,10 @@ export function getFirebaseAdmin(): admin.app.App {
 			projectId: process.env.FIREBASE_PROJECT_ID,
 		});
 
-		if (!isProd) console.log("✅ Firebase Admin initialized");
+		if (!isProd) logger.log("✅ Firebase Admin initialized");
 		return app;
 	} catch (error) {
-		console.error("❌ Firebase Admin initialization failed:", error);
+		logger.error("❌ Firebase Admin initialization failed:", error);
 		throw new Error(
 			`Firebase Admin init failed: ${error instanceof Error ? error.message : String(error)}`,
 		);
@@ -64,7 +65,7 @@ export async function verifyIdToken(idToken: string): Promise<string> {
 		return decodedToken.uid;
 	} catch (error) {
 		if (!isProd) {
-			console.error(
+			logger.error(
 				"❌ Token verification failed:",
 				error instanceof Error ? error.message : error,
 			);

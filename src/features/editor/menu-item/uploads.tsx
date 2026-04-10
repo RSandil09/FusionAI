@@ -141,7 +141,6 @@ export const Uploads = () => {
 	// ── handlers ────────────────────────────────────────────────────────────────
 	const handleAddVideo = (upload: any) => {
 		const src = upload.result?.url || upload.url;
-		console.log("🎬 handleAddVideo called:", { src, upload });
 		if (!src) {
 			console.warn("⚠️ No src found for video upload");
 			return;
@@ -151,7 +150,6 @@ export const Uploads = () => {
 			details: { src },
 			metadata: { previewUrl: src },
 		};
-		console.log("🎬 Dispatching ADD_VIDEO from uploads:", payload);
 		dispatch(ADD_VIDEO, {
 			payload,
 			options: { resourceId: "main", scaleMode: "fit" },
@@ -160,7 +158,6 @@ export const Uploads = () => {
 
 	const handleAddImage = (upload: any) => {
 		const src = upload.result?.url || upload.url;
-		console.log("📷 handleAddImage called:", { src, upload });
 		if (!src) {
 			console.warn("⚠️ No src found for image upload");
 			return;
@@ -172,7 +169,6 @@ export const Uploads = () => {
 			details: { src },
 			metadata: {},
 		};
-		console.log("📷 Dispatching ADD_IMAGE from uploads:", payload);
 		dispatch(ADD_IMAGE, {
 			payload,
 			options: {},
@@ -181,7 +177,6 @@ export const Uploads = () => {
 
 	const handleAddAudio = (upload: any) => {
 		const src = upload.result?.url || upload.url;
-		console.log("🔊 handleAddAudio called:", { src, upload });
 		if (!src) {
 			console.warn("⚠️ No src found for audio upload");
 			return;
@@ -192,7 +187,6 @@ export const Uploads = () => {
 			details: { src },
 			metadata: {},
 		};
-		console.log("🔊 Dispatching ADD_AUDIO from uploads:", payload);
 		dispatch(ADD_AUDIO, {
 			payload,
 			options: {},

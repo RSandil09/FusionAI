@@ -2,6 +2,7 @@
  * User Settings Database Operations
  */
 
+import { logger } from "@/lib/logger";
 import { supabase } from "./supabase";
 import type { Database } from "./database.types";
 
@@ -21,7 +22,7 @@ export async function getUserSettings(
 		.maybeSingle();
 
 	if (error) {
-		console.error("Error fetching user settings:", error);
+		logger.error("Error fetching user settings:", error);
 		return null;
 	}
 	return data;
@@ -41,7 +42,7 @@ export async function upsertUserSettings(
 		.maybeSingle();
 
 	if (error) {
-		console.error("Error upserting user settings:", error);
+		logger.error("Error upserting user settings:", error);
 		return null;
 	}
 	return data;

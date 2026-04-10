@@ -3,6 +3,7 @@
  * Direct server-side uploads, no presigned URLs (avoids CORS issues)
  */
 
+import { logger } from "@/lib/logger";
 import {
 	S3Client,
 	PutObjectCommand,
@@ -38,7 +39,7 @@ export function getR2Client(): S3Client {
 		},
 	});
 
-	console.log("✅ R2 client initialized");
+	logger.log("✅ R2 client initialized");
 	return r2Client;
 }
 
@@ -75,7 +76,7 @@ export async function uploadToR2(
 	await client.send(command);
 
 	const fullUrl = `${publicUrl}/${key}`;
-	console.log(`✅ Uploaded to R2: ${key} (${buffer.length} bytes)`);
+	logger.log(`✅ Uploaded to R2: ${key} (${buffer.length} bytes)`);
 
 	return fullUrl;
 }
@@ -100,7 +101,7 @@ export async function deleteFromR2(key: string): Promise<void> {
 	});
 
 	await client.send(command);
-	console.log(`✅ Deleted from R2: ${key}`);
+	logger.log(`✅ Deleted from R2: ${key}`);
 }
 
 /**

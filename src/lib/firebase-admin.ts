@@ -3,6 +3,7 @@
  * Used for server-side authentication verification
  */
 
+import { logger } from "@/lib/logger";
 import * as admin from "firebase-admin";
 
 // Skip initialization during build when using dummy credentials (e.g. CI)
@@ -32,7 +33,7 @@ if (!admin.apps.length) {
 						"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7\n-----END PRIVATE KEY-----\n",
 				}),
 			});
-			console.log("✅ Firebase Admin initialized (build mode)");
+			logger.log("✅ Firebase Admin initialized (build mode)");
 		} else {
 			let credential;
 
@@ -43,9 +44,9 @@ if (!admin.apps.length) {
 						process.env.FIREBASE_SERVICE_ACCOUNT,
 					);
 					credential = admin.credential.cert(serviceAccount);
-					console.log("✅ Using FIREBASE_SERVICE_ACCOUNT JSON");
+					logger.log("✅ Using FIREBASE_SERVICE_ACCOUNT JSON");
 				} catch (parseError) {
-					console.error(
+					logger.error(
 						"❌ Failed to parse FIREBASE_SERVICE_ACCOUNT:",
 						parseError,
 					);
@@ -64,19 +65,19 @@ if (!admin.apps.length) {
 					// Replace \\n characters in the private key
 					privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
 				});
-				console.log("✅ Using individual Firebase env vars");
+				logger.log("✅ Using individual Firebase env vars");
 			} else {
 				const errorMsg =
 					"Missing Firebase credentials. Set either FIREBASE_SERVICE_ACCOUNT or individual FIREBASE_* variables";
-				console.error("❌", errorMsg);
+				logger.error("❌", errorMsg);
 				throw new Error(errorMsg);
 			}
 
 			admin.initializeApp({ credential });
-			console.log("✅ Firebase Admin initialized successfully");
+			logger.log("✅ Firebase Admin initialized successfully");
 		}
 	} catch (error) {
-		console.error("❌ Firebase Admin initialization error:", error);
+		logger.error("❌ Firebase Admin initialization error:", error);
 		// Re-throw to make it clear this is a critical error
 		throw error;
 	}

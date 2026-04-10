@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
 			prev_page: data.prev_page,
 		});
 	} catch (error) {
-		console.error("Pexels Video API error:", error);
+		logger.error("Pexels Video API error:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch videos from Pexels" },
 			{ status: 500 },

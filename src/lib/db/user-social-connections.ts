@@ -2,6 +2,7 @@
  * User Social Connections Database Operations
  */
 
+import { logger } from "@/lib/logger";
 import { supabase } from "./supabase";
 import type { Database } from "./database.types";
 
@@ -23,7 +24,7 @@ export async function getSocialConnections(
 		.order("connected_at", { ascending: false });
 
 	if (error) {
-		console.error("Error fetching social connections:", error);
+		logger.error("Error fetching social connections:", error);
 		return [];
 	}
 	return data || [];
@@ -42,7 +43,7 @@ export async function getSocialConnection(
 		.maybeSingle();
 
 	if (error) {
-		console.error("Error fetching social connection:", error);
+		logger.error("Error fetching social connection:", error);
 		return null;
 	}
 	return data;
@@ -65,7 +66,7 @@ export async function upsertSocialConnection(
 		.maybeSingle();
 
 	if (error) {
-		console.error("Error upserting social connection:", error);
+		logger.error("Error upserting social connection:", error);
 		return null;
 	}
 	return conn ?? null;
@@ -82,7 +83,7 @@ export async function disconnectSocial(
 		.eq("provider", provider);
 
 	if (error) {
-		console.error("Error disconnecting social:", error);
+		logger.error("Error disconnecting social:", error);
 		return false;
 	}
 	return true;

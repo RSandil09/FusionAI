@@ -48,7 +48,6 @@ export const useDownloadState = create<DownloadState>((set, get) => ({
 		clearError: () => set({ error: undefined }),
 		startExport: async () => {
 			try {
-				console.log("🎬 === START EXPORT ===");
 				set({
 					exporting: true,
 					displayProgressModal: true,
@@ -58,21 +57,6 @@ export const useDownloadState = create<DownloadState>((set, get) => ({
 				});
 
 				const { payload, projectId } = get();
-
-				console.log("🔍 Export State Check:");
-				console.log("  - projectId:", projectId);
-				console.log("  - payload exists:", !!payload);
-				console.log(
-					"  - payload structure:",
-					payload
-						? {
-								hasTrackItemsMap: !!payload.trackItemsMap,
-								hasTrackItemIds: !!payload.trackItemIds,
-								hasSize: !!payload.size,
-								duration: payload.duration,
-							}
-						: "NO PAYLOAD",
-				);
 
 				if (!payload) {
 					console.error("❌ Payload is not defined in download state!");
@@ -99,12 +83,6 @@ export const useDownloadState = create<DownloadState>((set, get) => ({
 					},
 				};
 
-				console.log("📤 Sending POST to /api/render with body:", {
-					projectId: requestBody.projectId,
-					hasDesign: !!requestBody.design,
-					options: requestBody.options,
-				});
-
 				// Step 1: POST to start rendering
 				const response = await fetch(`/api/render`, {
 					method: "POST",
@@ -114,12 +92,6 @@ export const useDownloadState = create<DownloadState>((set, get) => ({
 					},
 					body: JSON.stringify(requestBody),
 				});
-
-				console.log(
-					"📥 Response status:",
-					response.status,
-					response.statusText,
-				);
 
 				if (!response.ok) {
 					const errorData = await response.json().catch(() => ({}));
@@ -135,7 +107,6 @@ export const useDownloadState = create<DownloadState>((set, get) => ({
 				}
 
 				const jobInfo = await response.json();
-				console.log("✅ Render job created:", jobInfo);
 				const jobId = jobInfo.renderId;
 
 				if (!jobId) {
@@ -144,7 +115,6 @@ export const useDownloadState = create<DownloadState>((set, get) => ({
 				}
 
 				// Step 2: Poll for status
-				console.log("🔄 Starting status polling for render:", jobId);
 
 				const checkStatus = async () => {
 					try {
@@ -172,12 +142,10 @@ export const useDownloadState = create<DownloadState>((set, get) => ({
 							error: renderError,
 						} = statusInfo;
 
-						console.log("📊 Render status:", status, "progress:", progress);
 
 						set({ progress: progress ?? 0 });
 
 						if (status === "COMPLETED") {
-							console.log("✅ Render completed! URL:", url);
 							set({
 								exporting: false,
 								output: { url, type: get().exportType },

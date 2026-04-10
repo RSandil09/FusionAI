@@ -3,6 +3,7 @@
  * CRUD operations for assets table (uploaded files)
  */
 
+import { logger } from "@/lib/logger";
 import { supabase } from "./supabase";
 import type { Database } from "./database.types";
 
@@ -21,14 +22,14 @@ export async function createAsset(data: AssetInsert): Promise<Asset | null> {
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error creating asset:", error);
+			logger.error("Error creating asset:", error);
 			return null;
 		}
 
-		console.log("✅ Asset saved to database:", asset?.file_name);
+		logger.log("✅ Asset saved to database:", asset?.file_name);
 		return asset ?? null;
 	} catch (error) {
-		console.error("Failed to create asset:", error);
+		logger.error("Failed to create asset:", error);
 		return null;
 	}
 }
@@ -45,13 +46,13 @@ export async function getAssets(userId: string): Promise<Asset[]> {
 			.order("uploaded_at", { ascending: false });
 
 		if (error) {
-			console.error("Error fetching assets:", error);
+			logger.error("Error fetching assets:", error);
 			return [];
 		}
 
 		return data || [];
 	} catch (error) {
-		console.error("Failed to get assets:", error);
+		logger.error("Failed to get assets:", error);
 		return [];
 	}
 }
@@ -68,13 +69,13 @@ export async function getProjectAssets(projectId: string): Promise<Asset[]> {
 			.order("uploaded_at", { ascending: false });
 
 		if (error) {
-			console.error("Error fetching project assets:", error);
+			logger.error("Error fetching project assets:", error);
 			return [];
 		}
 
 		return data || [];
 	} catch (error) {
-		console.error("Failed to get project assets:", error);
+		logger.error("Failed to get project assets:", error);
 		return [];
 	}
 }
@@ -95,13 +96,13 @@ export async function linkAssetToProject(
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error linking asset to project:", error);
+			logger.error("Error linking asset to project:", error);
 			return null;
 		}
 
 		return data;
 	} catch (error) {
-		console.error("Failed to link asset:", error);
+		logger.error("Failed to link asset:", error);
 		return null;
 	}
 }
@@ -114,13 +115,13 @@ export async function deleteAsset(assetId: string): Promise<boolean> {
 		const { error } = await supabase.from("assets").delete().eq("id", assetId);
 
 		if (error) {
-			console.error("Error deleting asset:", error);
+			logger.error("Error deleting asset:", error);
 			return false;
 		}
 
 		return true;
 	} catch (error) {
-		console.error("Failed to delete asset:", error);
+		logger.error("Failed to delete asset:", error);
 		return false;
 	}
 }

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 
 const YOUTUBE_AUDIO_LIBRARY_API =
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
 			has_prev_page: page > 1,
 		});
 	} catch (error) {
-		console.error("YouTube Audio Library API error:", error);
+		logger.error("YouTube Audio Library API error:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch audio from YouTube Audio Library" },
 			{ status: 500 },

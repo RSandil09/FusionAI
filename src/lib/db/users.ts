@@ -3,6 +3,7 @@
  * CRUD operations for users table
  */
 
+import { logger } from "@/lib/logger";
 import { supabase } from "./supabase";
 import type { Database } from "./database.types";
 
@@ -20,7 +21,7 @@ export async function upsertUser(data: UserInsert): Promise<User | null> {
 			!process.env.NEXT_PUBLIC_SUPABASE_URL ||
 			!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 		) {
-			console.warn("⚠️ Supabase not configured - skipping user sync");
+			logger.warn("⚠️ Supabase not configured - skipping user sync");
 			return null;
 		}
 
@@ -41,16 +42,16 @@ export async function upsertUser(data: UserInsert): Promise<User | null> {
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error upserting user:", error.message || error);
-			console.warn("💡 Make sure you've run the schema.sql in Supabase");
+			logger.error("Error upserting user:", error.message || error);
+			logger.warn("💡 Make sure you've run the schema.sql in Supabase");
 			return null;
 		}
 
-		console.log("✅ User synced to database:", user?.email);
+		logger.log("✅ User synced to database:", user?.email);
 		return user ?? null;
 	} catch (error) {
-		console.error("Failed to upsert user:", error);
-		console.warn("💡 Check if Supabase tables exist (run schema.sql)");
+		logger.error("Failed to upsert user:", error);
+		logger.warn("💡 Check if Supabase tables exist (run schema.sql)");
 		return null;
 	}
 }
@@ -67,13 +68,13 @@ export async function getUser(userId: string): Promise<User | null> {
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error fetching user:", error);
+			logger.error("Error fetching user:", error);
 			return null;
 		}
 
 		return data;
 	} catch (error) {
-		console.error("Failed to get user:", error);
+		logger.error("Failed to get user:", error);
 		return null;
 	}
 }
@@ -94,13 +95,13 @@ export async function updateUser(
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error updating user:", error);
+			logger.error("Error updating user:", error);
 			return null;
 		}
 
 		return data;
 	} catch (error) {
-		console.error("Failed to update user:", error);
+		logger.error("Failed to update user:", error);
 		return null;
 	}
 }

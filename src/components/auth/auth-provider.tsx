@@ -51,7 +51,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		const unsubscribe = onAuthStateChanged(
 			auth,
 			async (user) => {
-				console.log("Auth state changed:", user ? user.email : "No user");
 				setUser(user);
 
 				// Sync user to Supabase database

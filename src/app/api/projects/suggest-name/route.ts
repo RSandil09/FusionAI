@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { getGeminiClient, parseJsonResponse } from "@/lib/ai/gemini";
@@ -54,7 +55,7 @@ Return ONLY valid JSON: { "suggestions": ["Name One", "Name Two", "Name Three"] 
 
 		return NextResponse.json({ suggestions });
 	} catch (error) {
-		console.error("[suggest-name] Error:", error);
+		logger.error("[suggest-name] Error:", error);
 		// Non-fatal — client just won't show suggestions
 		return NextResponse.json({ suggestions: [] });
 	}

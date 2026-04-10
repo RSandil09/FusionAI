@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { supabaseAdmin } from "@/lib/db/supabase-admin";
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
 		const bestFrameMs = await pickBestThumbnailFrame(editorState, duration);
 		const frameNumber = Math.round((bestFrameMs / 1000) * fps);
 
-		console.log(`[thumbnail] Project ${projectId}: rendering frame ${frameNumber} (${bestFrameMs}ms)`);
+		logger.log(`[thumbnail] Project ${projectId}: rendering frame ${frameNumber} (${bestFrameMs}ms)`);
 
 		// 3. Bundle + render still
 		const bundleLocation = await bundle({
@@ -115,10 +116,10 @@ export async function POST(request: NextRequest) {
 			.update({ thumbnail_url: thumbnailUrl })
 			.eq("id", projectId);
 
-		console.log(`[thumbnail] Generated: ${thumbnailUrl}`);
+		logger.log(`[thumbnail] Generated: ${thumbnailUrl}`);
 		return NextResponse.json({ thumbnailUrl });
 	} catch (error) {
-		console.error("[thumbnail] Error:", error);
+		logger.error("[thumbnail] Error:", error);
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : "Thumbnail generation failed" },
 			{ status: 500 },
@@ -173,7 +174,7 @@ Return ONLY valid JSON: { "timestampMs": 1500 }`;
 			return parsed.timestampMs;
 		}
 	} catch (err) {
-		console.error("[thumbnail] Gemini frame selection failed:", err);
+		logger.error("[thumbnail] Gemini frame selection failed:", err);
 	}
 	return fallback;
 }

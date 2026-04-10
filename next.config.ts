@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-	/* config options here */
 	reactStrictMode: false,
 	async headers() {
 		return [
@@ -35,7 +35,6 @@ const nextConfig: NextConfig = {
 				test: /node_modules\/@designcombo\/(timeline|state|events|animations|transitions)/,
 				parser: {
 					javascript: {
-						// Disable HMR acceptance
 						importMeta: false,
 					},
 				},
@@ -45,4 +44,13 @@ const nextConfig: NextConfig = {
 	},
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+	// Suppress Sentry CLI output during builds unless DSN is set.
+	silent: !process.env.NEXT_PUBLIC_SENTRY_DSN,
+
+	// Tree-shake Sentry debug code from production bundles.
+	disableLogger: true,
+
+	// Automatically instrument Next.js data fetching methods.
+	autoInstrumentServerFunctions: true,
+});

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -173,7 +174,7 @@ export async function processAudioEffectsForRender(
 			if (!anyActive) return;
 
 			try {
-				console.log(`[AudioFX] Processing item ${item.id}...`);
+				logger.log(`[AudioFX] Processing item ${item.id}...`);
 
 				const originalFilePath = await downloadAudioToTemp(
 					src,
@@ -192,7 +193,7 @@ export async function processAudioEffectsForRender(
 				);
 
 				const command = `ffmpeg -y -i "${originalFilePath}" -af "${filterStr}" "${outputFilePath}"`;
-				console.log(`[AudioFX] Running: ${command}`);
+				logger.log(`[AudioFX] Running: ${command}`);
 				await execPromise(command);
 
 				// Upload processed file to R2 so Puppeteer can fetch it by HTTPS URL
@@ -206,13 +207,13 @@ export async function processAudioEffectsForRender(
 					details: { ...updatedMap[item.id].details, src: publicUrl },
 				};
 
-				console.log(`[AudioFX] Replaced ${item.id} src → ${publicUrl}`);
+				logger.log(`[AudioFX] Replaced ${item.id} src → ${publicUrl}`);
 
 				// Clean up local temp files
 				fs.unlinkSync(originalFilePath);
 				fs.unlinkSync(outputFilePath);
 			} catch (error) {
-				console.error(
+				logger.error(
 					`[AudioFX] Failed to process audio for item ${item.id}:`,
 					error,
 				);

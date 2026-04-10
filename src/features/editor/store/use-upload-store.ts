@@ -131,7 +131,6 @@ export const useUploadStore = create<UploadStore>()((set, get) => ({
 
 	loadUserAssets: async () => {
 		try {
-			console.log("📥 Loading user assets from database...");
 
 			// Import getAssets function
 			const { getAssets } = await import("@/lib/db/assets");
@@ -140,13 +139,11 @@ export const useUploadStore = create<UploadStore>()((set, get) => ({
 			// Get current user
 			const user = await getCurrentUser();
 			if (!user) {
-				console.log("No user logged in, skipping asset load");
 				return;
 			}
 
 			// Fetch assets from database
 			const assets = await getAssets(user.uid);
-			console.log(`📦 Loaded ${assets.length} assets from database`);
 
 			// Convert assets to UploadItem format
 			const uploadItems: UploadItem[] = assets.map((asset) => {
@@ -170,8 +167,6 @@ export const useUploadStore = create<UploadStore>()((set, get) => ({
 				if (repairedUrl && repairedUrl.startsWith(OLD_BUCKET)) {
 					console.warn(`⚠️ Updating old bucket URL for ${asset.file_name}`);
 					repairedUrl = repairedUrl.replace(OLD_BUCKET, NEW_BUCKET);
-					console.log(`   Old: ${OLD_BUCKET}/...`);
-					console.log(`   New: ${repairedUrl}`);
 				}
 
 				// Fix 3: Proxy media through Next.js API to add CORS headers
@@ -182,11 +177,9 @@ export const useUploadStore = create<UploadStore>()((set, get) => ({
 						/\.(mp4|webm|mov|avi|mkv)$/i.test(asset.file_name);
 					if (isVideo) {
 						const proxiedUrl = `/api/video-proxy?url=${encodeURIComponent(repairedUrl)}`;
-						console.log(`🎬 Proxying video URL for ${asset.file_name}`);
 						repairedUrl = proxiedUrl;
 					} else {
 						const proxiedUrl = `/api/image-proxy?url=${encodeURIComponent(repairedUrl)}`;
-						console.log(`🖼️ Proxying image URL for ${asset.file_name}`);
 						repairedUrl = proxiedUrl;
 					}
 				}
@@ -210,7 +203,6 @@ export const useUploadStore = create<UploadStore>()((set, get) => ({
 
 			// Set uploads in store
 			set({ uploads: uploadItems });
-			console.log("✅ Assets loaded into upload store");
 		} catch (error) {
 			console.error("Failed to load user assets:", error);
 		}

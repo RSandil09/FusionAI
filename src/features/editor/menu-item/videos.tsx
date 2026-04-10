@@ -35,7 +35,6 @@ export const Videos = () => {
 	}, [loadPopularVideos]);
 
 	const handleAddVideo = (payload: Partial<IVideo>) => {
-		console.log("🎬 handleAddVideo (Pexels) called:", payload);
 		dispatch(ADD_VIDEO, {
 			payload,
 			options: {
@@ -43,7 +42,6 @@ export const Videos = () => {
 				scaleMode: "fit",
 			},
 		});
-		console.log("🎬 ADD_VIDEO dispatched");
 	};
 
 	const handleSearch = async () => {

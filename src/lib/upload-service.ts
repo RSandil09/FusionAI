@@ -3,6 +3,7 @@
  * Simplified API client for uploads
  */
 
+import { logger } from "@/lib/logger";
 import axios from "axios";
 import { getIdToken } from "@/lib/auth/client";
 
@@ -32,7 +33,7 @@ export async function uploadFile(
 	file: File,
 	onProgress?: (progress: UploadProgress) => void,
 ): Promise<UploadResult> {
-	console.log(
+	logger.log(
 		"📤 Starting file upload:",
 		file.name,
 		`(${(file.size / 1024 / 1024).toFixed(2)} MB)`,
@@ -43,17 +44,17 @@ export async function uploadFile(
 
 	if (!token) {
 		const msg = "Not authenticated. Please log in to upload files.";
-		console.error("❌", msg);
+		logger.error("❌", msg);
 		throw new Error(msg);
 	}
 
-	console.log("   ✅ Got auth token (length:", token.length, ")");
+	logger.log("   ✅ Got auth token (length:", token.length, ")");
 
 	const formData = new FormData();
 	formData.append("file", file);
 
 	try {
-		console.log("   🚀 Sending upload request to /api/uploads");
+		logger.log("   🚀 Sending upload request to /api/uploads");
 
 		const response = await axios.post("/api/uploads", formData, {
 			headers: {
@@ -69,18 +70,18 @@ export async function uploadFile(
 			},
 		});
 
-		console.log("   ✅ Upload successful!");
+		logger.log("   ✅ Upload successful!");
 		return response.data.upload;
 	} catch (error) {
-		console.error("   ❌ Upload failed:");
+		logger.error("   ❌ Upload failed:");
 
 		if (axios.isAxiosError(error)) {
-			console.error("      Status:", error.response?.status);
-			console.error(
+			logger.error("      Status:", error.response?.status);
+			logger.error(
 				"      Message:",
 				error.response?.data?.message || error.message,
 			);
-			console.error("      Error:", error.response?.data?.error);
+			logger.error("      Error:", error.response?.data?.error);
 
 			if (error.response?.status === 401) {
 				throw new Error(

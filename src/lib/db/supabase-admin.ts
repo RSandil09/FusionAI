@@ -4,6 +4,7 @@
  * NEVER import this file in client components.
  */
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
@@ -19,10 +20,10 @@ if (!supabaseUrl) {
 let activeKey: string;
 if (serviceRoleKey && serviceRoleKey.trim().length > 0) {
 	activeKey = serviceRoleKey.trim();
-	console.log("✅ supabase-admin: using SUPABASE_SERVICE_ROLE_KEY");
+	logger.log("✅ supabase-admin: using SUPABASE_SERVICE_ROLE_KEY");
 } else if (anonKey && anonKey.trim().length > 0) {
 	activeKey = anonKey.trim();
-	console.error(
+	logger.error(
 		"⚠️ supabase-admin: SUPABASE_SERVICE_ROLE_KEY is not set — " +
 			"falling back to anon key. Server-side writes (save/render) will " +
 			"fail if the anon role lacks UPDATE/INSERT grants.\n" +

@@ -32,13 +32,6 @@ export const HorizontalScroll: React.FC<HorizontalScrollProps> = ({
 		setShowRightShadow(shouldShowRight);
 
 		if (debug) {
-			console.log("Scroll check:", {
-				scrollLeft,
-				scrollWidth,
-				clientWidth,
-				shouldShowLeft,
-				shouldShowRight,
-			});
 		}
 	};
 

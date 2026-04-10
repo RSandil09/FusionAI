@@ -597,7 +597,7 @@ export default function ControlItemHorizontal() {
 			if (trackItem) {
 				setTrackItem(trackItem);
 				setLayoutTrackItem(trackItem);
-			} else console.log(transitionsMap[id]);
+			} else {}
 		} else {
 			setTrackItem(null);
 			setLayoutTrackItem(null);

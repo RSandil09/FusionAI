@@ -14,8 +14,8 @@ export default function Audio({
 	const playbackRate = item.playbackRate || 1;
 	const children = (
 		<AudioWithEffects
-			startFrom={(item.trim?.from! / 1000) * fps}
-			endAt={(item.trim?.to! / 1000) * fps || 1 / fps}
+			startFrom={((item.trim?.from ?? 0) / 1000) * fps}
+			endAt={((item.trim?.to ?? 0) / 1000) * fps || 1 / fps}
 			playbackRate={playbackRate}
 			src={details.src}
 			volume={muteAudio ? 0 : details.volume! / 100}

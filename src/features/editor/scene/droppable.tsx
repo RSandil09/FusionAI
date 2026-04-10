@@ -31,11 +31,9 @@ const useDragAndDrop = (onDragStateChange?: (isDragging: boolean) => void) => {
 			...draggedData,
 			id: generateId(),
 		};
-		console.log("🎯 handleDrop called:", { type: draggedData.type, payload });
 
 		switch (draggedData.type) {
 			case AcceptedDropTypes.IMAGE:
-				console.log("📷 Dispatching ADD_IMAGE:", payload);
 				dispatch(ADD_IMAGE, { payload });
 				break;
 			case AcceptedDropTypes.VIDEO:
@@ -47,14 +45,12 @@ const useDragAndDrop = (onDragStateChange?: (isDragging: boolean) => void) => {
 				if (!meta.previewUrl && (payload.details as { src?: string })?.src) {
 					meta.previewUrl = (payload.details as { src?: string }).src;
 				}
-				console.log("🎬 Dispatching ADD_VIDEO:", payload);
 				dispatch(ADD_VIDEO, {
 					payload,
 					options: { resourceId: "main", scaleMode: "fit" },
 				});
 				break;
 			case AcceptedDropTypes.AUDIO:
-				console.log("🔊 Dispatching ADD_AUDIO:", payload);
 				dispatch(ADD_AUDIO, { payload });
 				break;
 		}

@@ -3,6 +3,7 @@
  * Proper initialization with clear error messages
  */
 
+import { logger } from "@/lib/logger";
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 
@@ -54,7 +55,7 @@ export function getFirebaseApp(): FirebaseApp {
 		firebaseApp = initializeApp(firebaseConfig);
 	}
 
-	console.log("✅ Firebase client initialized");
+	logger.log("✅ Firebase client initialized");
 	return firebaseApp;
 }
 
@@ -84,7 +85,7 @@ export function getFirebaseAuth(): Auth {
  */
 export async function getIdToken(retryCount = 0): Promise<string | null> {
 	if (!isFirebaseConfigured()) {
-		console.warn("⚠️ Firebase not configured - cannot get ID token");
+		logger.warn("⚠️ Firebase not configured - cannot get ID token");
 		return null;
 	}
 
@@ -92,7 +93,7 @@ export async function getIdToken(retryCount = 0): Promise<string | null> {
 
 	// Wait for auth to initialize (max 5 seconds) if currentUser is not immediately available
 	if (!auth.currentUser) {
-		console.log("⏳ Waiting for auth to initialize...");
+		logger.log("⏳ Waiting for auth to initialize...");
 		await new Promise<void>((resolve) => {
 			const unsubscribe = auth.onAuthStateChanged((user) => {
 				unsubscribe();
@@ -109,20 +110,20 @@ export async function getIdToken(retryCount = 0): Promise<string | null> {
 	const user = auth.currentUser;
 
 	if (!user) {
-		console.warn("⚠️ No user logged in - cannot get ID token");
+		logger.warn("⚠️ No user logged in - cannot get ID token");
 		return null;
 	}
 
 	try {
-		console.log("🔑 Getting fresh Firebase ID token for:", user.email);
-		console.log("   Attempt:", retryCount + 1);
+		logger.log("🔑 Getting fresh Firebase ID token for:", user.email);
+		logger.log("   Attempt:", retryCount + 1);
 
 		// CRITICAL: Always force refresh to ensure token is valid
 		const token = await user.getIdToken(true);
 
 		// Validate token length (Firebase tokens are typically 800-1200 characters)
 		if (!token || token.length < 100) {
-			console.error(
+			logger.error(
 				"❌ Token appears invalid (too short):",
 				token?.length || 0,
 			);
@@ -137,10 +138,10 @@ export async function getIdToken(retryCount = 0): Promise<string | null> {
 			const minutesUntilExpiry =
 				(expiresAt.getTime() - now.getTime()) / 1000 / 60;
 
-			console.log("✅ Got fresh Firebase ID token");
-			console.log("   Token length:", token.length);
-			console.log("   Expires at:", expiresAt.toISOString());
-			console.log(
+			logger.log("✅ Got fresh Firebase ID token");
+			logger.log("   Token length:", token.length);
+			logger.log("   Expires at:", expiresAt.toISOString());
+			logger.log(
 				"   Time until expiry:",
 				Math.round(minutesUntilExpiry),
 				"minutes",
@@ -148,28 +149,28 @@ export async function getIdToken(retryCount = 0): Promise<string | null> {
 
 			// Warn if token expires soon
 			if (minutesUntilExpiry < 5) {
-				console.warn(
+				logger.warn(
 					"⚠️ Token expires in less than 5 minutes - consider refreshing",
 				);
 			}
 		} catch (parseError) {
 			// Token parsing failed, but token might still be valid
-			console.warn("⚠️ Could not parse token expiration, but continuing");
+			logger.warn("⚠️ Could not parse token expiration, but continuing");
 		}
 
 		return token;
 	} catch (error) {
-		console.error("❌ Failed to get ID token:");
-		console.error("   Error:", error);
+		logger.error("❌ Failed to get ID token:");
+		logger.error("   Error:", error);
 
 		// Retry logic for transient failures
 		if (retryCount < 2) {
-			console.log("🔄 Retrying token fetch...");
+			logger.log("🔄 Retrying token fetch...");
 			await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 500ms
 			return getIdToken(retryCount + 1);
 		}
 
-		console.error(
+		logger.error(
 			"💥 Failed to get ID token after",
 			retryCount + 1,
 			"attempts",

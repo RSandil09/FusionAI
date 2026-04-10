@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { requireAuth } from "@/lib/auth/require-auth";
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const rl = checkRateLimit(
+	const rl = await checkRateLimit(
 		`transcribe:${user.id}`,
 		RATE_LIMIT,
 		RATE_WINDOW_MS,
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid url format" }, { status: 400 });
 	}
 
-	console.log(
+	logger.log(
 		`🎙️  Transcribing: ${absoluteMediaUrl.slice(0, 80)}… (lang: ${targetLanguage})`,
 	);
 
@@ -191,7 +192,7 @@ Rules:
 		});
 
 		const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-		console.log(
+		logger.log(
 			"🤖 Gemini raw response (first 300 chars):",
 			rawText.slice(0, 300),
 		);
@@ -219,7 +220,7 @@ Rules:
 		try {
 			transcriptionData = JSON.parse(cleaned);
 		} catch (parseErr) {
-			console.error(
+			logger.error(
 				"❌ Failed to parse Gemini response as JSON:",
 				cleaned.slice(0, 500),
 			);
@@ -241,7 +242,7 @@ Rules:
 		}
 
 		const wordCount = transcriptionData.results.main.words.length;
-		console.log(`✅ Transcribed ${wordCount} words successfully`);
+		logger.log(`✅ Transcribed ${wordCount} words successfully`);
 
 		// ── 4. Return as a JSON data-URL (avoids R2 storage for transcripts) ──
 		const jsonDataUrl = `data:application/json;base64,${Buffer.from(
@@ -250,7 +251,7 @@ Rules:
 
 		return NextResponse.json({ transcribe: { url: jsonDataUrl } });
 	} catch (error: any) {
-		console.error("❌ Transcription error:", error.message);
+		logger.error("❌ Transcription error:", error.message);
 		return NextResponse.json(
 			{ error: `Transcription failed: ${error.message}` },
 			{ status: 500 },

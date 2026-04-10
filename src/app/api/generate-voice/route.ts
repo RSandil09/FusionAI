@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { getR2Client } from "@/lib/r2-client";
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const rl = checkRateLimit(
+		const rl = await checkRateLimit(
 			`generate-voice:${user.id}`,
 			RATE_LIMIT,
 			RATE_WINDOW_MS,
@@ -53,10 +54,10 @@ export async function POST(request: NextRequest) {
 		}
 		const { text, voiceId, folder } = parsed.data;
 
-		console.log(
+		logger.log(
 			`🎙️ Generating voice for user ${user.id}: "${text.slice(0, 50)}..."`,
 		);
-		console.log(`   Voice ID: ${voiceId}`);
+		logger.log(`   Voice ID: ${voiceId}`);
 
 		// 3. Get access token from Firebase service account
 		const accessToken = await getGoogleAccessToken();
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
 
 		// 4. Parse voice ID - format is like "en-US-Neural2-A" or "en-GB-Neural2-B"
 		const voiceConfig = parseVoiceId(voiceId);
-		console.log(`   Parsed voice config:`, voiceConfig);
+		logger.log(`   Parsed voice config:`, voiceConfig);
 
 		// 5. Call Google Cloud Text-to-Speech API
 		const ttsResponse = await fetch(
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
 
 		if (!ttsResponse.ok) {
 			const errorData = await ttsResponse.json().catch(() => ({}));
-			console.error(
+			logger.error(
 				"Google TTS API error:",
 				JSON.stringify(errorData, null, 2),
 			);
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
 
 		// 6. Convert base64 to buffer
 		const audioBuffer = Buffer.from(audioContent, "base64");
-		console.log(`   Audio size: ${audioBuffer.length} bytes`);
+		logger.log(`   Audio size: ${audioBuffer.length} bytes`);
 
 		// 7. Upload to R2
 		const fileName = `${nanoid()}.mp3`;
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
 		const wordCount = text.split(/\s+/).length;
 		const estimatedDuration = Math.max(1, (wordCount / 150) * 60);
 
-		console.log(`✅ Voice generated: ${publicUrl}`);
+		logger.log(`✅ Voice generated: ${publicUrl}`);
 
 		return NextResponse.json({
 			agent: {
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
 			},
 		});
 	} catch (error) {
-		console.error("Voice generation error:", error);
+		logger.error("Voice generation error:", error);
 		return NextResponse.json(
 			{
 				error:
@@ -199,14 +200,14 @@ async function getGoogleAccessToken(): Promise<string | null> {
 	try {
 		const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 		if (!serviceAccountJson) {
-			console.error("FIREBASE_SERVICE_ACCOUNT not configured");
+			logger.error("FIREBASE_SERVICE_ACCOUNT not configured");
 			return null;
 		}
 
 		const serviceAccount = JSON.parse(serviceAccountJson);
 
 		if (!serviceAccount.client_email || !serviceAccount.private_key) {
-			console.error("Invalid service account format");
+			logger.error("Invalid service account format");
 			return null;
 		}
 
@@ -250,14 +251,14 @@ async function getGoogleAccessToken(): Promise<string | null> {
 
 		if (!tokenResponse.ok) {
 			const errorData = await tokenResponse.json().catch(() => ({}));
-			console.error("Token exchange failed:", errorData);
+			logger.error("Token exchange failed:", errorData);
 			return null;
 		}
 
 		const tokenData = await tokenResponse.json();
 		return tokenData.access_token;
 	} catch (error) {
-		console.error("Failed to get access token:", error);
+		logger.error("Failed to get access token:", error);
 		return null;
 	}
 }
@@ -312,7 +313,7 @@ function parseVoiceId(voiceId: string): {
 	}
 
 	// Default fallback
-	console.warn(`Could not parse voice ID: ${voiceId}, using defaults`);
+	logger.warn(`Could not parse voice ID: ${voiceId}, using defaults`);
 	return {
 		languageCode: "en-US",
 		name: "en-US-Neural2-A",

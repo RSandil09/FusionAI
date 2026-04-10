@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { upsertSocialConnection } from "@/lib/db/user-social-connections";
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 	const settingsUrl = `${origin}/settings?tab=connections`;
 
 	if (error) {
-		console.error("YouTube OAuth error:", error);
+		logger.error("YouTube OAuth error:", error);
 		return NextResponse.redirect(
 			`${settingsUrl}?error=${encodeURIComponent(error)}`,
 		);
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
 
 	if (!tokenRes.ok) {
 		const err = await tokenRes.text();
-		console.error("YouTube token exchange failed:", err);
+		logger.error("YouTube token exchange failed:", err);
 		return NextResponse.redirect(`${settingsUrl}?error=token_exchange`);
 	}
 

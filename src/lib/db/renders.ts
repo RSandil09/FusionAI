@@ -3,6 +3,7 @@
  * CRUD operations for renders table
  */
 
+import { logger } from "@/lib/logger";
 import { supabase } from "./supabase";
 import { supabaseAdmin } from "./supabase-admin";
 import type { Database } from "./database.types";
@@ -16,7 +17,7 @@ type RenderUpdate = Database["public"]["Tables"]["renders"]["Update"];
  */
 export async function createRender(data: RenderInsert): Promise<Render | null> {
 	try {
-		console.log("🎬 Creating render job:", {
+		logger.log("🎬 Creating render job:", {
 			user_id: data.user_id,
 			project_id: data.project_id,
 			status: data.status,
@@ -35,14 +36,14 @@ export async function createRender(data: RenderInsert): Promise<Render | null> {
 			.maybeSingle();
 
 		if (error) {
-			console.error("❌ Error creating render:", error);
+			logger.error("❌ Error creating render:", error);
 			return null;
 		}
 
-		console.log("✅ Render job created:", render?.id);
+		logger.log("✅ Render job created:", render?.id);
 		return render ?? null;
 	} catch (error) {
-		console.error("💥 Failed to create render:", error);
+		logger.error("💥 Failed to create render:", error);
 		return null;
 	}
 }
@@ -59,13 +60,13 @@ export async function getRender(renderId: string): Promise<Render | null> {
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error fetching render:", error);
+			logger.error("Error fetching render:", error);
 			return null;
 		}
 
 		return data;
 	} catch (error) {
-		console.error("Failed to get render:", error);
+		logger.error("Failed to get render:", error);
 		return null;
 	}
 }
@@ -93,13 +94,13 @@ export async function updateRenderStatus(
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error updating render:", error);
+			logger.error("Error updating render:", error);
 			return null;
 		}
 
 		return data;
 	} catch (error) {
-		console.error("Failed to update render:", error);
+		logger.error("Failed to update render:", error);
 		return null;
 	}
 }
@@ -116,13 +117,13 @@ export async function getProjectRenders(projectId: string): Promise<Render[]> {
 			.order("created_at", { ascending: false });
 
 		if (error) {
-			console.error("Error fetching project renders:", error);
+			logger.error("Error fetching project renders:", error);
 			return [];
 		}
 
 		return data || [];
 	} catch (error) {
-		console.error("Failed to get project renders:", error);
+		logger.error("Failed to get project renders:", error);
 		return [];
 	}
 }
@@ -153,13 +154,13 @@ export async function getUserRenders(
 		const { data, error } = await query;
 
 		if (error) {
-			console.error("Error fetching user renders:", error);
+			logger.error("Error fetching user renders:", error);
 			return [];
 		}
 
 		return data || [];
 	} catch (error) {
-		console.error("Failed to get user renders:", error);
+		logger.error("Failed to get user renders:", error);
 		return [];
 	}
 }
@@ -175,14 +176,14 @@ export async function deleteRender(renderId: string): Promise<boolean> {
 			.eq("id", renderId);
 
 		if (error) {
-			console.error("Error deleting render:", error);
+			logger.error("Error deleting render:", error);
 			return false;
 		}
 
-		console.log("✅ Render deleted:", renderId);
+		logger.log("✅ Render deleted:", renderId);
 		return true;
 	} catch (error) {
-		console.error("Failed to delete render:", error);
+		logger.error("Failed to delete render:", error);
 		return false;
 	}
 }

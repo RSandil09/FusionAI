@@ -84,8 +84,6 @@ const Editor = ({
 	// Load editor state from initialState prop or create empty state
 	useEffect(() => {
 		try {
-			console.log("📥 Loading editor state...");
-			console.log("   initialState present:", !!initialState);
 
 			let editorState;
 
@@ -109,17 +107,7 @@ const Editor = ({
 					id: saved.id || defaults.id,
 				};
 
-				console.log("📦 Merged state:", {
-					id: merged.id,
-					fps: merged.fps,
-					itemCount: Object.keys(merged.trackItemsMap).length,
-					trackItemIds: merged.trackItemIds?.length,
-					tracks: merged.tracks?.length,
-					size: merged.size,
-				});
-
 				if (validateEditorState(merged)) {
-					console.log("✅ Validation passed — loading from database");
 					editorState = merged;
 				} else {
 					console.warn(
@@ -128,15 +116,8 @@ const Editor = ({
 					editorState = createEmptyEditorState();
 				}
 			} else {
-				console.log("🆕 No initial state — creating empty editor state");
 				editorState = createEmptyEditorState();
 			}
-
-			console.log("🔵 Dispatching DESIGN_LOAD:", {
-				tracks: editorState.tracks?.length,
-				items: editorState.trackItemIds?.length,
-				size: editorState.size,
-			});
 
 			dispatch(DESIGN_LOAD, { payload: editorState });
 
@@ -154,12 +135,6 @@ const Editor = ({
 			if (Array.isArray(s.lockedTrackIds)) setLockedTrackIds(filterTrackIds(s.lockedTrackIds));
 			if (Array.isArray(s.mutedTrackIds))  setMutedTrackIds(filterTrackIds(s.mutedTrackIds));
 			if (Array.isArray(s.soloTrackIds))   setSoloTrackIds(filterTrackIds(s.soloTrackIds));
-
-			console.log(
-				"✅ Editor loaded with",
-				editorState.trackItemIds?.length,
-				"items",
-			);
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : String(error);
 			console.error("❌ Failed to load editor state:", msg);
@@ -296,7 +271,7 @@ const Editor = ({
 			if (trackItem) {
 				setTrackItem(trackItem);
 				setLayoutTrackItem(trackItem);
-			} else console.log(transitionsMap[id]);
+			} else {}
 		} else {
 			setTrackItem(null);
 			setLayoutTrackItem(null);

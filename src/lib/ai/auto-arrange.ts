@@ -12,6 +12,7 @@
  * and the state needs a top-level `id`.
  */
 
+import { logger } from "@/lib/logger";
 import { generateId } from "@designcombo/timeline";
 import { getGeminiClient, parseJsonResponse } from "./gemini";
 
@@ -73,7 +74,7 @@ async function analyseVideoScenes(
 		const sizeMB = buffer.byteLength / (1024 * 1024);
 
 		if (sizeMB > 20) {
-			console.warn(`[auto-arrange] Video ${sizeMB.toFixed(1)} MB > 20 MB limit — skipping AI`);
+			logger.warn(`[auto-arrange] Video ${sizeMB.toFixed(1)} MB > 20 MB limit — skipping AI`);
 			return fallback;
 		}
 
@@ -98,7 +99,7 @@ async function analyseVideoScenes(
 		);
 		return segments.length > 0 ? segments : fallback;
 	} catch (err) {
-		console.error("[auto-arrange] Scene analysis error:", err);
+		logger.error("[auto-arrange] Scene analysis error:", err);
 		return fallback;
 	}
 }
@@ -155,7 +156,7 @@ async function transcribeVideo(url: string): Promise<TranscriptWord[]> {
 		const sizeMB = buffer.byteLength / (1024 * 1024);
 
 		if (sizeMB > 20) {
-			console.warn(`[auto-arrange] Video ${sizeMB.toFixed(1)} MB > 20 MB — skipping transcription`);
+			logger.warn(`[auto-arrange] Video ${sizeMB.toFixed(1)} MB > 20 MB — skipping transcription`);
 			return [];
 		}
 
@@ -179,7 +180,7 @@ async function transcribeVideo(url: string): Promise<TranscriptWord[]> {
 			(w) => typeof w.word === "string" && typeof w.start === "number" && typeof w.end === "number",
 		);
 	} catch (err) {
-		console.error("[auto-arrange] Transcription error:", err);
+		logger.error("[auto-arrange] Transcription error:", err);
 		return [];
 	}
 }
@@ -388,7 +389,7 @@ async function detectBeats(url: string): Promise<number[]> {
 		const sizeMB = buffer.byteLength / (1024 * 1024);
 
 		if (sizeMB > 20) {
-			console.warn(`[auto-arrange] Audio ${sizeMB.toFixed(1)} MB > 20 MB — skipping beat sync`);
+			logger.warn(`[auto-arrange] Audio ${sizeMB.toFixed(1)} MB > 20 MB — skipping beat sync`);
 			return [];
 		}
 
@@ -409,10 +410,10 @@ async function detectBeats(url: string): Promise<number[]> {
 		const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
 		const parsed = parseJsonResponse<{ bpm: number; beats: number[] }>(rawText);
 		const beats = (parsed?.beats ?? []).filter((b) => typeof b === "number" && b >= 0);
-		console.log(`[auto-arrange] Beat detection: ${beats.length} beats at ${parsed?.bpm ?? 0} BPM`);
+		logger.log(`[auto-arrange] Beat detection: ${beats.length} beats at ${parsed?.bpm ?? 0} BPM`);
 		return beats;
 	} catch (err) {
-		console.error("[auto-arrange] Beat detection error:", err);
+		logger.error("[auto-arrange] Beat detection error:", err);
 		return [];
 	}
 }

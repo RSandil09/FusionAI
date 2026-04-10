@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
@@ -34,14 +35,14 @@ export async function GET(request: NextRequest) {
 
 		// Validate that it's an R2 URL
 		if (!mediaUrl.includes(".r2.dev")) {
-			console.error("❌ Media proxy: Invalid URL (not R2):", mediaUrl);
+			logger.error("❌ Media proxy: Invalid URL (not R2):", mediaUrl);
 			return NextResponse.json(
 				{ error: "Invalid URL - must be R2 URL" },
 				{ status: 400 },
 			);
 		}
 
-		console.log("🖼️ Media proxy request:", mediaUrl.slice(0, 100));
+		logger.log("🖼️ Media proxy request:", mediaUrl.slice(0, 100));
 
 		// Forward Range header if present (important for video seeking)
 		const range = request.headers.get("range");
@@ -60,14 +61,14 @@ export async function GET(request: NextRequest) {
 
 		clearTimeout(timeoutId);
 
-		console.log(
+		logger.log(
 			"📥 R2 response status:",
 			mediaResponse.status,
 			mediaResponse.statusText,
 		);
 
 		if (!mediaResponse.ok && mediaResponse.status !== 206) {
-			console.error(
+			logger.error(
 				"❌ Failed to fetch from R2:",
 				mediaResponse.status,
 				mediaUrl,
@@ -130,14 +131,14 @@ export async function GET(request: NextRequest) {
 		clearTimeout(timeoutId);
 
 		if (error.name === "AbortError") {
-			console.error("Proxy timeout - request took too long");
+			logger.error("Proxy timeout - request took too long");
 			return NextResponse.json(
 				{ error: "Request timeout - file too large or slow connection" },
 				{ status: 504 },
 			);
 		}
 
-		console.error("Proxy error:", error);
+		logger.error("Proxy error:", error);
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 },

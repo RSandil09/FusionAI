@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase-admin";
 import { cookies } from "next/headers";
@@ -11,7 +12,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 export async function POST(request: Request) {
 	// Rate limit: 30 attempts per minute per IP
 	const ip = getClientIp(request);
-	const rl = checkRateLimit(`auth-session:${ip}`, 30, 60_000);
+	const rl = await checkRateLimit(`auth-session:${ip}`, 30, 60_000);
 	if (!rl.success) {
 		return NextResponse.json(
 			{ message: "Too many login attempts. Try again later." },
@@ -20,12 +21,12 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		console.log("🔵 /api/auth/session POST request received");
+		logger.log("🔵 /api/auth/session POST request received");
 
 		const { idToken } = await request.json();
 
 		if (!idToken) {
-			console.error("❌ No idToken provided");
+			logger.error("❌ No idToken provided");
 			return NextResponse.json(
 				{ message: "ID token is required" },
 				{ status: 400 },
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
 		// Verify the ID token first
 		const decodedToken = await adminAuth.verifyIdToken(idToken);
-		console.log("✅ ID token verified for user:", decodedToken.uid);
+		logger.log("✅ ID token verified for user:", decodedToken.uid);
 
 		// Set session expiration to 14 days (in milliseconds)
 		const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 			expiresIn,
 		});
 
-		console.log("✅ Session cookie created");
+		logger.log("✅ Session cookie created");
 
 		// Set the cookie
 		const cookieStore = await cookies();
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
 			path: "/",
 		});
 
-		console.log("✅ Session cookie set in response");
+		logger.log("✅ Session cookie set in response");
 
 		return NextResponse.json(
 			{
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
 			{ status: 200 },
 		);
 	} catch (error) {
-		console.error("❌ Session creation error:", error);
+		logger.error("❌ Session creation error:", error);
 		return NextResponse.json(
 			{
 				message: "Failed to create session",
@@ -83,19 +84,19 @@ export async function POST(request: Request) {
  */
 export async function DELETE() {
 	try {
-		console.log("🔵 /api/auth/session DELETE request received");
+		logger.log("🔵 /api/auth/session DELETE request received");
 
 		const cookieStore = await cookies();
 		cookieStore.delete("session");
 
-		console.log("✅ Session cookie deleted");
+		logger.log("✅ Session cookie deleted");
 
 		return NextResponse.json(
 			{ success: true, message: "Session deleted" },
 			{ status: 200 },
 		);
 	} catch (error) {
-		console.error("❌ Session deletion error:", error);
+		logger.error("❌ Session deletion error:", error);
 		return NextResponse.json(
 			{
 				message: "Failed to delete session",

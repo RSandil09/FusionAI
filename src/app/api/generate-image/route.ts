@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { getR2Client } from "@/lib/r2-client";
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const rl = checkRateLimit(
+		const rl = await checkRateLimit(
 			`generate-image:${user.id}`,
 			RATE_LIMIT,
 			RATE_WINDOW_MS,
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 		}
 		const { prompt, style, aspectRatio } = parsed.data;
 
-		console.log(
+		logger.log(
 			`🎨 Generating image for user ${user.id}: "${prompt.slice(0, 50)}..."`,
 		);
 
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
 
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({}));
-			console.error("Together AI error:", errorData);
+			logger.error("Together AI error:", errorData);
 			throw new Error(
 				errorData.error?.message || `API error: ${response.status}`,
 			);
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
 
 		const publicUrl = `${process.env.R2_PUBLIC_URL}/${storageKey}`;
 
-		console.log(`✅ Image generated: ${publicUrl}`);
+		logger.log(`✅ Image generated: ${publicUrl}`);
 
 		return NextResponse.json({
 			image: {
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
 			},
 		});
 	} catch (error) {
-		console.error("Image generation error:", error);
+		logger.error("Image generation error:", error);
 		const errorMessage =
 			error instanceof Error ? error.message : "Image generation failed";
 

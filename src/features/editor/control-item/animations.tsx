@@ -42,16 +42,13 @@ const Animations = () => {
 			.map((presetKey) => {
 				const preset = presets[presetKey as "scaleIn"];
 
-				const style = React.useMemo(
-					() => ({
-						backgroundImage: `url(${preset.previewUrl})`,
-						backgroundSize: "cover",
-						width: "70px",
-						height: "70px",
-						borderRadius: "8px",
-					}),
-					[preset.previewUrl],
-				);
+				const style = {
+					backgroundImage: `url(${preset.previewUrl})`,
+					backgroundSize: "cover",
+					width: "70px",
+					height: "70px",
+					borderRadius: "8px",
+				};
 
 				return (
 					<div

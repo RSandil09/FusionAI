@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
@@ -38,7 +39,7 @@ async function fetchWithRetry(
 				(error as Error).name === "AbortError" ||
 				(error as any)?.cause?.code === "UND_ERR_CONNECT_TIMEOUT";
 
-			console.warn(
+			logger.warn(
 				`Video proxy fetch attempt ${attempt}/${retries} failed:`,
 				isTimeout ? "Connection timeout" : (error as Error).message,
 			);
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
 			videoUrl.includes(domain),
 		);
 		if (!isAllowedDomain) {
-			console.warn(
+			logger.warn(
 				"Video proxy: blocked URL from non-allowed domain:",
 				videoUrl,
 			);
@@ -134,8 +135,8 @@ export async function GET(request: NextRequest) {
 		} catch (fetchError) {
 			const errorMessage =
 				(fetchError as Error).message || "Unknown fetch error";
-			console.error("Video proxy: All fetch attempts failed for:", videoUrl);
-			console.error("Error details:", errorMessage);
+			logger.error("Video proxy: All fetch attempts failed for:", videoUrl);
+			logger.error("Error details:", errorMessage);
 
 			// Return a more helpful error
 			return NextResponse.json(
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		if (!response.ok && response.status !== 206) {
-			console.error("Video proxy: HTTP error:", response.status, videoUrl);
+			logger.error("Video proxy: HTTP error:", response.status, videoUrl);
 			return NextResponse.json(
 				{ error: "Failed to fetch video", status: response.status },
 				{ status: response.status },
@@ -207,7 +208,7 @@ export async function GET(request: NextRequest) {
 			headers: responseHeaders,
 		});
 	} catch (error) {
-		console.error("Video proxy unexpected error:", error);
+		logger.error("Video proxy unexpected error:", error);
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 },
@@ -292,7 +293,7 @@ export async function HEAD(request: NextRequest) {
 			headers: responseHeaders,
 		});
 	} catch (error) {
-		console.error("Video proxy HEAD error:", error);
+		logger.error("Video proxy HEAD error:", error);
 		return new NextResponse(null, { status: 504 });
 	}
 }

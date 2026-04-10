@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
 	const apiKey = process.env.PEXELS_API_KEY;
 
 	if (!apiKey) {
-		console.error("Pexels API: PEXELS_API_KEY is not set in .env.local");
+		logger.error("Pexels API: PEXELS_API_KEY is not set in .env.local");
 		return NextResponse.json(
 			{
 				error:
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
 
 		if (!response.ok) {
 			const errorBody = await response.text();
-			console.error(
+			logger.error(
 				"Pexels API error:",
 				response.status,
 				errorBody.slice(0, 200),
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
-		console.error("Pexels API error:", message);
+		logger.error("Pexels API error:", message);
 		return NextResponse.json(
 			{ error: "Failed to fetch images from Pexels", detail: message },
 			{ status: 500 },

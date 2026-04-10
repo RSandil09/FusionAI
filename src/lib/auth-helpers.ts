@@ -3,6 +3,7 @@
  * Accepts Firebase session cookie OR Authorization: Bearer <id-token>
  */
 
+import { logger } from "@/lib/logger";
 import { cookies, headers } from "next/headers";
 import { adminAuth } from "./firebase-admin";
 
@@ -53,7 +54,7 @@ export async function getUserFromRequest(): Promise<AuthUser | null> {
 			email: decodedClaims.email || "",
 		};
 	} catch (error) {
-		console.error("❌ Auth error:", error);
+		logger.error("❌ Auth error:", error);
 		return null;
 	}
 }

@@ -84,15 +84,6 @@ function EditorContent() {
 			const projectData = await getProject(projectId, user.uid);
 
 			if (projectData) {
-				console.log("📦 DB Project Data Loaded:", {
-					id: projectData.id,
-					name: projectData.name,
-					hasEditorState: !!projectData.editor_state,
-					editorStateKeys: projectData.editor_state
-						? Object.keys(projectData.editor_state as object)
-						: [],
-				});
-
 				setProject(projectData);
 				// Update last accessed timestamp
 				await updateLastAccessed(projectId);

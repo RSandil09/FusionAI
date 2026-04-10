@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { getUserFromRequest } from "@/lib/auth-helpers";
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const rl = checkRateLimit(
+		const rl = await checkRateLimit(
 			`analyze-video:${user.id}`,
 			RATE_LIMIT,
 			RATE_WINDOW_MS,
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
 			if (cookie) fetchHeaders["Cookie"] = cookie;
 		}
 
-		console.log(
+		logger.log(
 			`🎬 Analyzing video (${analysisType}) for user ${user.id}: ${fetchUrl.slice(0, 80)}...`,
 		);
 
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
 		} catch (fetchError) {
 			const msg =
 				fetchError instanceof Error ? fetchError.message : "Unknown error";
-			console.error("Video fetch failed:", msg);
+			logger.error("Video fetch failed:", msg);
 			return NextResponse.json(
 				{
 					error: `Failed to fetch video: ${msg}. Check that the video URL is accessible.`,
@@ -204,14 +205,14 @@ export async function POST(request: NextRequest) {
 		});
 
 		const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-		console.log(
+		logger.log(
 			`🤖 Gemini analysis response (first 300 chars): ${rawText.slice(0, 300)}`,
 		);
 
 		// 7. Parse response
 		const segments = parseAnalysisResponse(rawText, analysisType);
 
-		console.log(
+		logger.log(
 			`✅ Analysis complete: found ${segments.length} ${analysisType}`,
 		);
 
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
 			},
 		});
 	} catch (error) {
-		console.error("Video analysis error:", error);
+		logger.error("Video analysis error:", error);
 		return NextResponse.json(
 			{
 				error: error instanceof Error ? error.message : "Video analysis failed",
@@ -367,7 +368,7 @@ function parseAnalysisResponse(
 						: undefined,
 			}));
 	} catch (error) {
-		console.error("Failed to parse analysis response:", error);
+		logger.error("Failed to parse analysis response:", error);
 		return [];
 	}
 }

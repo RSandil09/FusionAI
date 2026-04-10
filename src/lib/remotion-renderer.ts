@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { bundle } from "@remotion/bundler/dist/bundle";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { getR2Client } from "@/lib/r2-client";
@@ -30,7 +31,7 @@ async function deleteTempAudio(keys: string[]): Promise<void> {
 			client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key })),
 		),
 	);
-	console.log(`[render] Deleted ${keys.length} temp audio file(s) from R2`);
+	logger.log(`[render] Deleted ${keys.length} temp audio file(s) from R2`);
 }
 
 function logToFile(message: string) {
@@ -39,9 +40,9 @@ function logToFile(message: string) {
 	try {
 		fs.appendFileSync(LOG_FILE, logLine);
 	} catch (e) {
-		console.error("Failed to write to log file:", e);
+		logger.error("Failed to write to log file:", e);
 	}
-	console.log(message);
+	logger.log(message);
 }
 
 /**
@@ -52,7 +53,7 @@ export async function renderVideo(
 	config: RenderConfig,
 ): Promise<string> {
 	const { tempR2Keys = [] } = config;
-	console.log(`[${renderId}] renderVideo called. CWD: ${process.cwd()}`);
+	logger.log(`[${renderId}] renderVideo called. CWD: ${process.cwd()}`);
 	try {
 		logToFile(
 			`[${renderId}] Starting render job. Config: ${JSON.stringify(config.compositionId)}`,
@@ -153,7 +154,7 @@ export async function renderVideo(
 		const errorStack = error instanceof Error ? error.stack : undefined;
 
 		logToFile(`[${renderId}] Render failed: ${errorMessage}`);
-		console.error(`[${renderId}] Render failed:`, errorMessage);
+		logger.error(`[${renderId}] Render failed:`, errorMessage);
 
 		// Clean up temp R2 audio even on failure
 		await deleteTempAudio(tempR2Keys);
@@ -173,10 +174,10 @@ export async function renderVideo(
  * Start a render job in the background
  */
 export function startRenderJob(renderId: string, config: RenderConfig): void {
-	console.log(`[${renderId}] startRenderJob initiated`);
+	logger.log(`[${renderId}] startRenderJob initiated`);
 	// Run render in background (non-blocking)
 	renderVideo(renderId, config).catch((error) => {
-		console.error(`Background render ${renderId} failed with error:`, error);
+		logger.error(`Background render ${renderId} failed with error:`, error);
 		logToFile(
 			`[${renderId}] CRITICAL FAIL: ${error instanceof Error ? error.stack : error}`,
 		);

@@ -3,6 +3,7 @@
  * Delete an analysis from history
  */
 
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { deleteAnalysisFromHistory } from "@/lib/db/analysis-history";
@@ -35,7 +36,7 @@ export async function DELETE(
 
 		return NextResponse.json({ deleted: true });
 	} catch (error) {
-		console.error("Analysis history DELETE error:", error);
+		logger.error("Analysis history DELETE error:", error);
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : "Failed to delete" },
 			{ status: 500 },

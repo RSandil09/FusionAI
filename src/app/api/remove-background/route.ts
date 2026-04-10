@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { getR2Client } from "@/lib/r2-client";
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const rl = checkRateLimit(
+		const rl = await checkRateLimit(
 			`remove-background:${user.id}`,
 			RATE_LIMIT,
 			RATE_WINDOW_MS,
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 		}
 		const { imageUrl } = parsed.data;
 
-		console.log(
+		logger.log(
 			`🎨 Removing background for user ${user.id}: ${imageUrl.slice(0, 50)}...`,
 		);
 
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
 
 		const publicUrl = `${process.env.R2_PUBLIC_URL}/${storageKey}`;
 
-		console.log(`✅ Background removed: ${publicUrl}`);
+		logger.log(`✅ Background removed: ${publicUrl}`);
 
 		return NextResponse.json({
 			image: {
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
 			},
 		});
 	} catch (error) {
-		console.error("Background removal error:", error);
+		logger.error("Background removal error:", error);
 		return NextResponse.json(
 			{
 				error:
@@ -190,7 +191,7 @@ async function removeBackgroundWithReplicate(
 
 		if (!createResponse.ok) {
 			const errorData = await createResponse.json().catch(() => ({}));
-			console.error("Replicate create prediction failed:", errorData);
+			logger.error("Replicate create prediction failed:", errorData);
 
 			// If it's an auth error and no token provided, return failure
 			if (createResponse.status === 401 || createResponse.status === 403) {
@@ -245,7 +246,7 @@ async function removeBackgroundWithReplicate(
 			error: result.error || "Background removal timed out or failed",
 		};
 	} catch (error) {
-		console.error("Replicate API error:", error);
+		logger.error("Replicate API error:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Replicate API error",

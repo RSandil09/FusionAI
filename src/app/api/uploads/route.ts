@@ -3,6 +3,7 @@
  * POST /api/uploads - Upload file or import from URL
  */
 
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromAuthHeader } from "@/lib/auth/server";
 import { uploadToR2, generateUploadKey } from "@/lib/storage/r2";
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const rl = checkRateLimit(`uploads:${userId}`, RATE_LIMIT, RATE_WINDOW_MS);
+		const rl = await checkRateLimit(`uploads:${userId}`, RATE_LIMIT, RATE_WINDOW_MS);
 		if (!rl.success) {
 			return NextResponse.json(
 				{ error: "Rate limit exceeded. Try again later." },
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 	} catch (error) {
-		console.error("Upload error:", error);
+		logger.error("Upload error:", error);
 
 		return NextResponse.json(
 			{
@@ -129,13 +130,13 @@ async function handleFileUpload(
 	const url = await uploadToR2(key, buffer, file.type);
 
 	// CRITICAL: Validate URL before saving to database
-	console.log("📝 Upload URL:", url);
+	logger.log("📝 Upload URL:", url);
 	if (!url.includes(".r2.dev")) {
-		console.error("❌ Invalid R2 URL format:", url);
+		logger.error("❌ Invalid R2 URL format:", url);
 		throw new Error(`Invalid R2 URL: ${url}`);
 	}
 	if (url.includes("fcr2.dev")) {
-		console.error("❌ Malformed R2 URL detected (missing dot):", url);
+		logger.error("❌ Malformed R2 URL detected (missing dot):", url);
 		throw new Error(
 			`Malformed R2 URL - check R2_PUBLIC_URL environment variable`,
 		);

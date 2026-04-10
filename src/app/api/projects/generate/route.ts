@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { createProject } from "@/lib/db/projects";
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
-		const rl = checkRateLimit(`generate:${user.id}`, RATE_LIMIT, RATE_WINDOW_MS);
+		const rl = await checkRateLimit(`generate:${user.id}`, RATE_LIMIT, RATE_WINDOW_MS);
 		if (!rl.success) {
 			return NextResponse.json(
 				{ error: "Rate limit exceeded. Try again later." },
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		console.log(`[generate] Project created: ${project.id} for user ${user.id}`);
+		logger.log(`[generate] Project created: ${project.id} for user ${user.id}`);
 
 		// 5. Run AI auto-arrange (this is the slow step — video analysis via Gemini)
 		//    We do this after creating the project so the client gets the projectId
@@ -130,13 +131,13 @@ export async function POST(request: NextRequest) {
 		//    synchronously within the request. The client shows a loading screen
 		//    until this resolves. Typical time: 5–30s depending on video sizes.
 
-		console.log(`[generate] Running auto-arrange for ${assets.length} asset(s)...`);
+		logger.log(`[generate] Running auto-arrange for ${assets.length} asset(s)...`);
 
 		let editorState: Awaited<ReturnType<typeof autoArrangeAssets>>;
 		try {
 			editorState = await autoArrangeAssets(assets, fps, size);
 		} catch (err) {
-			console.error("[generate] autoArrangeAssets failed:", err);
+			logger.error("[generate] autoArrangeAssets failed:", err);
 			// Fall back to an empty timeline so the project is still usable
 			editorState = {
 				duration: 5000,
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		const arrangedState = editorState as Record<string, any>;
-		console.log(
+		logger.log(
 			`[generate] Auto-arrange complete. Duration: ${arrangedState.duration}ms, ` +
 			`Items: ${(arrangedState.trackItemIds as unknown[]).length}`,
 		);
@@ -163,14 +164,14 @@ export async function POST(request: NextRequest) {
 			.eq("id", project.id);
 
 		if (updateErr) {
-			console.error("[generate] Failed to save editor_state:", updateErr);
+			logger.error("[generate] Failed to save editor_state:", updateErr);
 			// Project still exists — editor will open with empty state
 		}
 
 		// 7. Return projectId — client redirects to /editor/:id
 		return NextResponse.json({ projectId: project.id }, { status: 200 });
 	} catch (error) {
-		console.error("[generate] Unexpected error:", error);
+		logger.error("[generate] Unexpected error:", error);
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : "Server error" },
 			{ status: 500 },

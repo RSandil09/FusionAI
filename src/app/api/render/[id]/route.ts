@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { getRender } from "@/lib/db/renders";
 import { getUserFromRequest } from "@/lib/auth-helpers";
@@ -30,7 +31,7 @@ export async function GET(
 		const render = await getRender(id);
 
 		if (!render) {
-			console.warn(`⚠️ Render job not found: ${id}`);
+			logger.warn(`⚠️ Render job not found: ${id}`);
 			return NextResponse.json(
 				{ message: "Render job not found" },
 				{ status: 404 },
@@ -67,7 +68,7 @@ export async function GET(
 
 		return NextResponse.json(response, { status: 200 });
 	} catch (error) {
-		console.error("Error checking render status:", error);
+		logger.error("Error checking render status:", error);
 		return NextResponse.json(
 			{
 				message: "Failed to check render status",

@@ -70,17 +70,14 @@ const AnimationCaption = () => {
 			.map((presetKey) => {
 				const preset = presets[presetKey as "scaleIn"];
 				const isActive = isAnimationActive(presetKey as PresetName, type);
-				const style = React.useMemo(
-					() => ({
-						backgroundImage: `url(${preset.previewUrl})`,
-						backgroundSize: "cover",
-						width: "50px",
-						height: "50px",
-						borderRadius: "8px",
-						border: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-					}),
-					[preset.previewUrl, isActive],
-				);
+				const style = {
+					backgroundImage: `url(${preset.previewUrl})`,
+					backgroundSize: "cover",
+					width: "50px",
+					height: "50px",
+					borderRadius: "8px",
+					border: isActive ? "2px solid #3b82f6" : "2px solid transparent",
+				};
 				if (
 					preset.property?.toLowerCase().includes("text") ||
 					preset.property?.toLowerCase().includes("shake")

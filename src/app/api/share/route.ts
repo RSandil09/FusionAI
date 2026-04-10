@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import { getSocialConnection } from "@/lib/db/user-social-connections";
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
 
 			if (!uploadRes.ok) {
 				const err = await uploadRes.text();
-				console.error("YouTube upload failed:", err);
+				logger.error("YouTube upload failed:", err);
 				return NextResponse.json(
 					{ error: "YouTube upload failed", detail: err.slice(0, 200) },
 					{ status: 502 },
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
 				videoId,
 			});
 		} catch (err) {
-			console.error("YouTube share error:", err);
+			logger.error("YouTube share error:", err);
 			return NextResponse.json(
 				{ error: "Failed to upload to YouTube" },
 				{ status: 500 },

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
@@ -333,7 +334,7 @@ export async function POST(request: NextRequest) {
 			limit,
 		});
 	} catch (error) {
-		console.error("Error in voices API:", error);
+		logger.error("Error in voices API:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch voices" },
 			{ status: 500 },

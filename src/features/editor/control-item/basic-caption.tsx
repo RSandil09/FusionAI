@@ -370,16 +370,13 @@ const BasicCaption = ({
 			.filter(filter)
 			.map((presetKey) => {
 				const preset = presets[presetKey as "scaleIn"];
-				const style = React.useMemo(
-					() => ({
-						backgroundImage: `url(${preset.previewUrl})`,
-						backgroundSize: "cover",
-						width: "50px",
-						height: "50px",
-						borderRadius: "8px",
-					}),
-					[preset.previewUrl],
-				);
+				const style = {
+					backgroundImage: `url(${preset.previewUrl})`,
+					backgroundSize: "cover",
+					width: "50px",
+					height: "50px",
+					borderRadius: "8px",
+				};
 				if (
 					preset.property?.toLowerCase().includes("text") ||
 					preset.property?.toLowerCase().includes("shake")
@@ -451,7 +448,7 @@ const BasicCaption = ({
 					onChangeTextAlign={onChangeTextAlign}
 					onChangeTextDecoration={onChangeTextDecoration}
 					handleChangeOpacity={handleChangeOpacity}
-					handleBackgroundChange={(v: string) => console.log(v)}
+					handleBackgroundChange={() => {}}
 				/>
 			),
 		},

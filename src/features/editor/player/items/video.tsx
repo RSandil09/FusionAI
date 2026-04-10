@@ -78,8 +78,8 @@ export const Video = ({
 				>
 					<div style={calculateMediaStyles(details, crop)}>
 						<RemotionVideo
-							startFrom={(item.trim?.from! / 1000) * fps}
-							endAt={(item.trim?.to! / 1000) * fps || 1 / fps}
+							startFrom={((item.trim?.from ?? 0) / 1000) * fps}
+							endAt={((item.trim?.to ?? 0) / 1000) * fps || 1 / fps}
 							playbackRate={playbackRate}
 							src={videoSrc}
 							volume={muteAudio ? 0 : (details.volume || 0) / 100}

@@ -260,7 +260,6 @@ const DownloadPopover = ({
 			...stateManager.toJSON(),
 		};
 
-		console.log({ data });
 
 		// Set projectId and payload in state before starting export
 		if (projectId) {
@@ -449,8 +448,6 @@ const SaveButton = ({
 	const [saving, setSaving] = useState(false);
 
 	const handleSave = async () => {
-		console.log("💾 Save button clicked");
-		console.log("   projectId:", projectId);
 
 		if (!projectId) {
 			console.error("❌ No projectId provided to SaveButton");
@@ -460,7 +457,6 @@ const SaveButton = ({
 
 		setSaving(true);
 		try {
-			console.log("   Getting state from stateManager...");
 			const state = stateManager.toJSON();
 
 			if (!state.trackItemIds) {
@@ -474,7 +470,6 @@ const SaveButton = ({
 				return;
 			}
 
-			console.log("   Calling PATCH /api/projects/" + projectId);
 			let response: Response;
 			try {
 				response = await fetch(`/api/projects/${projectId}`, {
@@ -502,11 +497,8 @@ const SaveButton = ({
 				/* raw text */
 			}
 
-			console.log("📥 Save response:", response.status, response.statusText);
-			console.log("   Body:", responseData);
 
 			if (response.ok) {
-				console.log("✅ Project saved at", responseData.project?.updated_at);
 				toast.success("Project saved successfully");
 			} else {
 				const errMsg =

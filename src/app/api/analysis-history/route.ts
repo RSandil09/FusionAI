@@ -4,6 +4,7 @@
  * POST: Save a new analysis to history
  */
 
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth-helpers";
 import {
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
 		return NextResponse.json({ history });
 	} catch (error) {
-		console.error("Analysis history GET error:", error);
+		logger.error("Analysis history GET error:", error);
 		return NextResponse.json(
 			{
 				error:
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
 
 		return NextResponse.json({ saved });
 	} catch (error) {
-		console.error("Analysis history POST error:", error);
+		logger.error("Analysis history POST error:", error);
 		return NextResponse.json(
 			{
 				error:

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { startRenderJob } from "@/lib/remotion-renderer";
 import { processAudioEffectsForRender } from "@/lib/ffmpeg-audio-processor";
@@ -11,21 +12,21 @@ const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 export async function POST(request: Request) {
 	try {
-		console.log("🔵 /api/render POST request received");
+		logger.log("🔵 /api/render POST request received");
 
 		// 1. Authenticate user
-		console.log("🔵 Authenticating user...");
+		logger.log("🔵 Authenticating user...");
 		const user = await getUserFromRequest();
 		if (!user) {
-			console.log("❌ Authentication failed - no user");
+			logger.log("❌ Authentication failed - no user");
 			return NextResponse.json(
 				{ message: "Unauthorized - please log in" },
 				{ status: 401 },
 			);
 		}
-		console.log("✅ User authenticated:", user.id);
+		logger.log("✅ User authenticated:", user.id);
 
-		const rl = checkRateLimit(`render:${user.id}`, RATE_LIMIT, RATE_WINDOW_MS);
+		const rl = await checkRateLimit(`render:${user.id}`, RATE_LIMIT, RATE_WINDOW_MS);
 		if (!rl.success) {
 			return NextResponse.json(
 				{ message: "Rate limit exceeded. Try again later." },
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
 		// 2. Parse and validate request
 		const body = await request.json();
-		console.log("🚀 Received render request from user:", user.id);
+		logger.log("🚀 Received render request from user:", user.id);
 
 		const { projectId, design, options } = body;
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
 		const projectData = design || body;
 		const renderOptions = options || {};
 
-		console.log("📂 Processing projectData for project:", projectId);
+		logger.log("📂 Processing projectData for project:", projectId);
 
 		// Extract project data
 		const {
@@ -90,15 +91,15 @@ export async function POST(request: Request) {
 			);
 		}
 
-		console.log(`✅ Render job ${render.id} created in database`);
+		logger.log(`✅ Render job ${render.id} created in database`);
 
 		// 3.5 Pre-process Audio Effects via FFMPEG locally
-		console.log(`🎬 [${render.id}] Pre-processing Audio Effects...`);
+		logger.log(`🎬 [${render.id}] Pre-processing Audio Effects...`);
 		const { updatedMap: processedTrackItemsMap, tempR2Keys } =
 			await processAudioEffectsForRender(trackItemsMap, render.id);
 
 		// 4. Start rendering in background
-		console.log(`🎬 Starting render job ${render.id} in background...`);
+		logger.log(`🎬 Starting render job ${render.id} in background...`);
 		try {
 			startRenderJob(render.id, {
 				compositionId: "VideoEditor",
@@ -116,12 +117,12 @@ export async function POST(request: Request) {
 				tempR2Keys,
 			});
 		} catch (renderError) {
-			console.error(`❌ Failed to start render job:`, renderError);
+			logger.error(`❌ Failed to start render job:`, renderError);
 			// Don't fail the request - render will mark itself as failed
 			// Just log the error
 		}
 
-		console.log(`✅ Render job ${render.id} started for project ${projectId}`);
+		logger.log(`✅ Render job ${render.id} started for project ${projectId}`);
 
 		// 5. Return render ID immediately (rendering continues in background)
 		return NextResponse.json(
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
 			{ status: 200 },
 		);
 	} catch (error) {
-		console.error("❌ Error starting render:", error);
+		logger.error("❌ Error starting render:", error);
 		return NextResponse.json(
 			{
 				message: "Failed to start render",

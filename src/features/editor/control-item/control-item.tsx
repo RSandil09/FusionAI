@@ -31,7 +31,7 @@ const Container = ({ children }: { children: React.ReactNode }) => {
 			if (trackItem) {
 				setTrackItem(trackItem);
 				setLayoutTrackItem(trackItem);
-			} else console.log(transitionsMap[id]);
+			} else {}
 		} else {
 			setTrackItem(null);
 			setLayoutTrackItem(null);

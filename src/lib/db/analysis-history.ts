@@ -4,6 +4,7 @@
  * Server-only: uses supabaseAdmin (import only in API routes)
  */
 
+import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "./supabase-admin";
 import type { Database } from "./database.types";
 
@@ -49,12 +50,12 @@ export async function saveAnalysisToHistory(
 			.maybeSingle();
 
 		if (error) {
-			console.error("Error saving analysis to history:", error);
+			logger.error("Error saving analysis to history:", error);
 			return null;
 		}
 		return data ?? null;
 	} catch (err) {
-		console.error("Failed to save analysis history:", err);
+		logger.error("Failed to save analysis history:", err);
 		return null;
 	}
 }
@@ -83,12 +84,12 @@ export async function getAnalysisHistory(
 		const { data, error } = await query;
 
 		if (error) {
-			console.error("Error fetching analysis history:", error);
+			logger.error("Error fetching analysis history:", error);
 			return [];
 		}
 		return data || [];
 	} catch (err) {
-		console.error("Failed to get analysis history:", err);
+		logger.error("Failed to get analysis history:", err);
 		return [];
 	}
 }
@@ -108,12 +109,12 @@ export async function deleteAnalysisFromHistory(
 			.eq("user_id", userId);
 
 		if (error) {
-			console.error("Error deleting analysis:", error);
+			logger.error("Error deleting analysis:", error);
 			return false;
 		}
 		return true;
 	} catch (err) {
-		console.error("Failed to delete analysis:", err);
+		logger.error("Failed to delete analysis:", err);
 		return false;
 	}
 }
